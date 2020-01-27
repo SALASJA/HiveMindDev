@@ -1,6 +1,6 @@
 currentport=$(ls /dev/cu.wchusbserial*)
-avr-gcc -Os -DF_CPU=16000000UL -mmcu=ATmega328P -c -o main.o main2.c
-avr-gcc -Os -DF_CPU=16000000UL -mmcu=ATmega328P -c -o uart.o ../UART/uart.c
+avr-gcc -Os -DF_CPU=16000000UL -mmcu=ATmega328P -c -o main.o main.c
+avr-gcc -Os -DF_CPU=16000000UL -mmcu=ATmega328P -c -o uart.o ../UART_Finalized/uart.c
 avr-gcc -Os -DF_CPU=16000000UL -mmcu=ATmega328P -c -o nrf24.o ../NRF24L01/nrf24.c
 avr-gcc -Os -DF_CPU=16000000UL -mmcu=ATmega328P -c -o radioPinFunctions.o ../NRF24L01/radioPinFunctions_rfnano.c
 avr-gcc -mmcu=ATmega328P main.o uart.o nrf24.o radioPinFunctions.o -o main

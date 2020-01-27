@@ -22,21 +22,31 @@
 #include "main.h"
 #include "../UART/uart.h"
 
+#define TRUE 1
+#define FALSE 0
 
 void copy(char * string, uint8_t * data_array);
 void copy_s(uint8_t * data_array, char * string);
+void print_array(char * string);
 
 int main()
 {
 	uart_init();
     stdout = &uart_output;
     stdin  = &uart_input;
-	uint8_t temp;
+	uint8_t lost;
+	uint8_t maxcounts;
+	uint8_t fails = 0;
+	uint8_t failed = FALSE;
+	uint8_t receiving = FALSE;
+	uint8_t data_not_read = TRUE;
+	uint8_t nothing_yet_displayed = FALSE;
 	uint8_t q = 0;
 	char data_array_s[32];
+	char data_array_s2[32];
 	uint8_t data_array[32];
-	uint8_t tx_address[5] = {0xE7,0xE7,0xE7,0xE7,0xE7};
-	uint8_t rx_address[5] = {0xD7,0xD7,0xD7,0xD7,0xD7};
+	uint8_t rx_address[5] = {0xE7,0xE7,0xE7,0xE7,0xE7};
+	uint8_t tx_address[5] = {0xD7,0xD7,0xD7,0xD7,0xD7};
     
     /* init hardware pins */
     nrf24_init();
@@ -47,36 +57,58 @@ int main()
     /* Set the device addresses */
     nrf24_tx_address(tx_address);
     nrf24_rx_address(rx_address);    
-
+	char c;
+	uint8_t b;
     while(1)
     {                
         /* Fill the data buffer */
+        b = 0;
+        c = getchar();
+        while( c != '\n'){
+        	data_array_s[b] = c;
+        	b++;
+        	c = getchar();
+        }
+        data_array_s[b] = 0;
         
-        scanf("%c%*c", data_array_s);
-        scanf("%30[0-9a-zA-Z ]", data_array_s);                                 
+        if(data_array_s[0] != 10 && data_array_s[0] != 0 && receiving == TRUE ){   
+        	printf("sending: ");
+        	print_array(data_array_s);
+        	receiving = FALSE;                           
+			/* Automatically goes to TX mode */
+			copy(data_array_s, data_array);
+			nrf24_send(data_array);        
+			/* Wait for transmission to end */
+			while(nrf24_isSending());
+			/* Make analysis on last tranmission attempt */
+			lost = nrf24_lastMessageStatus();
+			maxcounts = nrf24_retransmissionCount();
+			
+
+
 		
-        /* Automatically goes to TX mode */
-        copy(data_array_s, data_array); 
-        nrf24_send(data_array);        
-        
-        /* Wait for transmission to end */
-        while(nrf24_isSending());
-
-        /* Make analysis on last tranmission attempt */
-        temp = nrf24_lastMessageStatus();
-
-
-        
-		/* Retranmission count indicates the tranmission quality */
-		temp = nrf24_retransmissionCount();
+			/* Retranmission count indicates the tranmission quality */
+			//temp = nrf24_retransmissionCount();
+			/* Optionally, go back to RX mode ... */
+			printf("finished sending\n");
+		}
 		
-
-		/* Optionally, go back to RX mode ... */
-		nrf24_powerUpRx();
-		while(!nrf24_dataReady())
-        nrf24_getData(data_array);
-        copy_s(data_array,data_array_s);
-        printf("%s\n", data_array_s);
+		if(!receiving){
+			nrf24_powerUpRx();
+			receiving = TRUE;
+		}
+		
+		if( nrf24_dataReady()){
+        	nrf24_getData(data_array);
+        	copy_s(data_array,data_array_s2);
+        	printf("recieved: ");
+        	print_array(data_array_s2);
+        	nothing_yet_displayed = FALSE;
+        }
+        else if(!nothing_yet_displayed){
+        	printf("Nothing yet!\n");
+        	nothing_yet_displayed = TRUE;
+        }
 
         
         
@@ -91,10 +123,11 @@ int main()
 
 void copy_s(uint8_t * data_array, char * string){
 	uint8_t i = 0;
-	for(int i = 0; i < 31; i++){
+	while(data_array[i] != '\0'){
 		string[i] = data_array[i];
+		i++;
 	}
-	string[31] = 0; 
+	string[i] = 0; 
 	
 	
 }
@@ -105,6 +138,15 @@ void copy(char * string, uint8_t * data_array){
 		data_array[i] = string[i];
 		i++;
 	}
-	data_array[i] = string[i];
+	data_array[i] = 0;
 	
+}
+
+void print_array(char * string){
+	uint8_t i = 0;
+	while(string[i] != '\0'){
+		printf("%c ", string[i]);
+		i++;
+	}
+	printf("\n");
 }
