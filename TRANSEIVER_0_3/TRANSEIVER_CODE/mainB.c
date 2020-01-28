@@ -1,16 +1,5 @@
 /*
- * Demonstration on how to redirect stdio to UART. 
- *
- * http://appelsiini.net/2011/simple-usart-with-avr-libc
- *
- * To compile and upload run: make clean; make; make program;
- * Connect to serial with: screen /dev/tty.usbserial-*
- *
- * Copyright 2011 Mika Tuupola
- *
- * Licensed under the MIT license:
- *   http://www.opensource.org/licenses/mit-license.php
- *
+	HIVEMIND Project edits
  */
  
 #include <avr/io.h>
@@ -95,6 +84,7 @@ void setTransmitterAddress(uint8_t * new_address){
 	for(uint8_t i = 0; i < 5; i++){
 		tx_address[i] = new_address[i + 1];
 	}
+	nrf24_tx_address(tx_address);
 	print_address(tx_address);
 }
 
@@ -102,6 +92,7 @@ void setReceiverAddress(uint8_t * new_address){
 	for(uint8_t i = 0; i < 5; i++){
 		rx_address[i] = new_address[i + 1];
 	}
+    nrf24_rx_address(rx_address);
 	print_address(rx_address);
 }
 
