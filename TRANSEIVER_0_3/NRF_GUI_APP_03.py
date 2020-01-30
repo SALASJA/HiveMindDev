@@ -46,7 +46,7 @@ class Messaging:
 		self.to_verify = []
 		
 	def closeSerialPort(self):
-		if self.serialPort != None:
+		if self.serialPort != None:    #i can see a problem if needing to change serial ports
 			self.receiving.join()
 			self.serialPort.close()
 			del OPEN_PROCESSES["serial_port"]

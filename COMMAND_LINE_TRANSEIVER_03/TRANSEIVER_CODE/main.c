@@ -16,8 +16,8 @@ uint8_t receive_buffer[32];
 uint8_t data_buffer[32];
 uint8_t data_buffer_index = 0;
 uint8_t receiving = FALSE;
-uint8_t rx_address[5] = {0xE7,0xE7,0xE7,0xE7,0xE7};
-uint8_t tx_address[5] = {0xD7,0xD7,0xD7,0xD7,0xD7};
+uint8_t tx_address[5] = {'?','?','?','?','?'};
+uint8_t rx_address[5] = {'!','!','!','!','!'};
 char success[32] = "<<<success>>>";
 char prev_data[32];
 
