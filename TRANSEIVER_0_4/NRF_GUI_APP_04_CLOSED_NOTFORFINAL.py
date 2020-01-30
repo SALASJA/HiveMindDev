@@ -172,7 +172,7 @@ class Controller:
 			else:
 				r = message.index('\\')
 				message = message[l:r]
-			tx_address_label = 
+			tx_address_label = "example"
 			
 			
 		window = self.view.getWidget("window")

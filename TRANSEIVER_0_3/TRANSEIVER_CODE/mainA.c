@@ -85,7 +85,6 @@ void setTransmitterAddress(uint8_t * new_address){
 		tx_address[i] = new_address[i + 1];
 	}
 	nrf24_tx_address(tx_address);
-	print_address(tx_address);
 }
 
 void setReceiverAddress(uint8_t * new_address){
@@ -93,7 +92,6 @@ void setReceiverAddress(uint8_t * new_address){
 		rx_address[i] = new_address[i + 1];
 	}
     nrf24_rx_address(rx_address);
-	print_address(rx_address);
 }
 
 void left_shift(uint8_t * data_buffer){

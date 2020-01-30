@@ -4,7 +4,6 @@ mainss=(mainA mainB)
 mainso=(mainA.o mainA.b)
 mainshex=(mainA.hex mainB.hex)
 n=$((${#currentport[@]}-1))
-
 for i in $(seq 0 $n)
 do
 	printf "PROGRAMMING BOARD ON PORT %s\n" ${currentport[i]}
