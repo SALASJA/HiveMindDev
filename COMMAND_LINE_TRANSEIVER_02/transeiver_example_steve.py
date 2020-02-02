@@ -1,9 +1,8 @@
-lsimport glob
+import glob
 from transeiver import *
 
-
 def main():
-    ports = glob.glob("/dev/tty.wchusbserial*")
+    ports = glob.glob("/dev/tty.usbserial*")
     if(len(ports) == 0):
     	print("no ports available, program ending")
     	exit()
