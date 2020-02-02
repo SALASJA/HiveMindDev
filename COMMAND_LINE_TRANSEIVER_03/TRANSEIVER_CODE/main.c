@@ -11,6 +11,7 @@
 
 #define TRUE 1
 #define FALSE 0
+#define toggle_success_mode(x) x = !x
 
 uint8_t receive_buffer[32];
 uint8_t data_buffer[32];
@@ -18,11 +19,15 @@ uint8_t data_buffer_index = 0;
 uint8_t receiving = FALSE;
 uint8_t tx_address[5] = {'?','?','?','?','?'};
 uint8_t rx_address[5] = {'!','!','!','!','!'};
+uint8_t success_mode = FALSE;         //I feel success mode should automatically be off
 char success[32] = "<<<success>>>";
 char prev_data[32];
 
 void left_shift(uint8_t * data_buffer);
 uint8_t is_success(uint8_t * recieve);
+uint8_t print_address(uint8_t * address);
+void setTransmitterAddress(uint8_t * new_address);
+void setReceiverAddress(uint8_t * new_address);
 
 int main()
 {
@@ -45,14 +50,20 @@ int main()
 			receiving = TRUE;
 		}
 		if(nrf24_dataReady()){
-        	nrf24_getData(receive_buffer);
-        	if(is_success(receive_buffer)){
-        		printf("SUCCESS:%s\n",success);
-        	}else{
-        		printf("RECEIVED:%s\n",receive_buffer); //bytes 0-9 need to be removed by program
-        		nrf24_send(success);
+			nrf24_getData(receive_buffer);
+			if(success_mode){
+				if(is_success(receive_buffer)){
+					printf("SUCCESS:%s\n",success);
+				}else{
+					printf("RECEIVED:%s\n",receive_buffer); //bytes 0-9 need to be removed by program
+					nrf24_send(success);
+					receiving = FALSE;
+				}
         	}
-        	receiving = FALSE;
+        	else{
+				printf("RECEIVED:%s\n",receive_buffer);
+        	}
+        	
         }
 		/* Or you might want to power down after TX */
 		// nrf24_powerDown();            
@@ -73,7 +84,7 @@ uint8_t is_success(uint8_t * receive){
 }
 
 uint8_t print_address(uint8_t * address){
-	printf("ADDRESS:");
+	printf("STATE:");
 	for(uint8_t i = 0; i < 5; i++){
 		USART_Transmit(address[i]);
 	}
@@ -115,16 +126,30 @@ ISR(USART_RX_vect) //its a lot like a GUI event if you have worked with those, m
 					  nrf24_send(data_buffer); //maybe I should edit esto instead
 					  while(nrf24_isSending())
 					  	;
-					} break;
+					  } 
+					  break;
 					
-			case '1':   setTransmitterAddress(data_buffer);
+			case '1': setTransmitterAddress(data_buffer);
 					  break;
-			case '2':   setReceiverAddress(data_buffer);	
+			case '2': setReceiverAddress(data_buffer);	
 					  break;
-			case '3':   print_address(tx_address);	
+			case '3': print_address(tx_address);	
 					  break;
-			case '4':   print_address(rx_address);
+			case '4': print_address(rx_address);
 			          break;
+			case '5': toggle_success_mode(success_mode);
+					  break;
+			case '6': { //get success mode
+						printf("STATE:");
+						USART_Transmit(success_mode + '0');
+						USART_Transmit('\n');
+					  }
+					  break;
+			case '7': //in python program this is for discover mode this is not meant to be implemented here
+			          break;
+			case '8': // in python program this is for finding mode, again not to be implemented
+					  break; // will add a polling mode I think a separate pipe should be dedicated for that
+					  
 			default:  printf("INVALID STATE\n");
 					
 		}
