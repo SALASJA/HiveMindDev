@@ -20,7 +20,7 @@ uint8_t receiving = FALSE;
 uint8_t tx_address[5] = {'?','?','?','?','?'};
 uint8_t rx_address[5] = {'!','!','!','!','!'};
 uint8_t success_mode = FALSE;         //I feel success mode should automatically be off
-char success[32] = "<<<success>>>";
+char success[32] = "<<<success>>>";//13
 char prev_data[32];
 
 void left_shift(uint8_t * data_buffer);
@@ -41,7 +41,7 @@ int main()
     nrf24_tx_address(tx_address);
     nrf24_rx_address(rx_address);
     sei();    
-
+	DDRD |= (1 << 5); //can comment out these lines but can now give us insight on external controll
     while(1)
     {                
 		/* Optionally, go back to RX mode ... */
@@ -51,11 +51,19 @@ int main()
 		}
 		if(nrf24_dataReady()){
 			nrf24_getData(receive_buffer);
+			if(receive_buffer[0] == '1' || receive_buffer[0] == '1'){ // this might have to be a separate library
+				PORTD ^= 1 << 5;
+			}
 			if(success_mode){
 				if(is_success(receive_buffer)){
 					printf("SUCCESS:%s\n",success);
 				}else{
 					printf("RECEIVED:%s\n",receive_buffer); //bytes 0-9 need to be removed by program
+					for(uint8_t i = 0; i < 5; i++){
+						success[13 + i] = rx_address[i];
+					}
+					success[18] = (PIND & (1 << 5)) + 48;
+					success[19] = 0;
 					nrf24_send(success);
 					receiving = FALSE;
 				}
@@ -73,12 +81,11 @@ int main()
 }
 
 uint8_t is_success(uint8_t * receive){
-	uint8_t i = 0;
-	while(success[i] != '\0'){
+	uint8_t i;
+	for(i = 0; i < 13; i++){
 		if(receive[i] != success[i]){
 			return FALSE;
 		}
-		i++;
 	}
 	return TRUE;
 }
@@ -145,9 +152,11 @@ ISR(USART_RX_vect) //its a lot like a GUI event if you have worked with those, m
 						USART_Transmit('\n');
 					  }
 					  break;
-			case '7': //in python program this is for discover mode this is not meant to be implemented here
+			case '7': PORTD ^= 1 << 5;    //getting the state of whether a port is on would be cool, this is where stron designing of the c code will come on
+					  break;
+			case '8': //in python program this is for discover mode this is not meant to be implemented here
 			          break;
-			case '8': // in python program this is for finding mode, again not to be implemented
+			case '9': // in python program this is for finding mode, again not to be implemented
 					  break; // will add a polling mode I think a separate pipe should be dedicated for that
 					  
 			default:  printf("INVALID STATE\n");

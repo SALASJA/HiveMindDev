@@ -10,6 +10,7 @@ class Transeiver:
 	GET_RX_ADDRESS = '4'
 	TOGGLE_SUCCESS_MODE = '5'
 	GET_SUCCESS_MODE = '6'
+	TOGGLE_LED = '7'
 	FLUSH = '\r'   #should use something different
 	
 	def __init__(self, TXaddress = "?????", RXaddress = "!!!!!", SERIAL_PORT_NAME = None, BAUD_RATE = 9600): # there might need to be a node ID nodeid = A, and tx = 00000 and rx = 11111
@@ -149,6 +150,8 @@ class Transeiver:
 		elif message[0] == Transeiver.GET_SUCCESS_MODE:   #this toggles the success protocol
 			#self.receive_queue.put(self.success_mode)
 			print("send message success mode:",self.success_mode)
+		elif message[0] == Transeiver.TOGGLE_LED:
+			self.serial_port.write(bytes(Transeiver.TOGGLE_LED + Transeiver.FLUSH, encoding = 'utf-8'))
 			
 	
 	def __del__(self):
@@ -159,8 +162,8 @@ class Transeiver:
 class MasterTranseiver(Transeiver):    #some networks have properties, some with changing address or those that are not available #central ID for node might be needed
 	SEARCHING_ADDRESS_A = "!!!!!"   #must state that these are reserved addresses #what kind of goal does this satisfy
 	SEARCHING_ADDRESS_B = "?????"    #can be in a constant searching mode
-	DISCOVERY = '7'
-	FINDING = '8'
+	DISCOVERY = '8'
+	FINDING = '9'
 	ADDRESS_MESSAGE_SIZE = 13       #example. ADDRESS-12345  which is 13 characters
 	def __init__(self,TXaddress = "?????", RXaddress = "!!!!!", SERIAL_PORT_NAME = None, BAUD_RATE = 9600):
 		super().__init__(TXaddress, RXaddress, SERIAL_PORT_NAME, BAUD_RATE)
