@@ -19,8 +19,13 @@ def printing(ser):
 	while True:
 		reading = ser.readline()
 		reading = str(reading)
+<<<<<<< HEAD
 		#if reading != "b''":
 		print(reading)
+=======
+		if "STATE:" in reading or "INVALID STATE:" in reading or "SUCCESS:" in reading :
+			print(reading)
+>>>>>>> a189092872b7112c92c89f2ddd32cedb13126bd7
 
 def main():
     ser = None
