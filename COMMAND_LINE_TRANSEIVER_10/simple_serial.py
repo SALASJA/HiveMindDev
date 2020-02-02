@@ -5,8 +5,8 @@ import time
 import multiprocessing
 import curses
 
-ports = glob.glob("/dev/tty.wchusbserial*")[0]
-all_ports =  glob.glob("/dev/tty.wchusbserial*")
+ports = glob.glob("/dev/tty.usbserial*")[0]
+all_ports =  glob.glob("/dev/tty.usbserial*")
 print(all_ports)
 
 # this port address is for the serial tx/rx pins on the GPIO header
@@ -18,18 +18,20 @@ SERIAL_RATE = 9600
 def printing(ser):
 	while True:
 		reading = ser.readline()
+		reading = str(reading)
+		#if reading != "b''":
 		print(reading)
 
 def main():
     ser = None
     p1 = None
     try:
-    	ser = serial.Serial(SERIAL_PORT, SERIAL_RATE)
+    	ser = serial.Serial(SERIAL_PORT, SERIAL_RATE, timeout = 0)
     	p1 = multiprocessing.Process(target = printing, args = (ser,))
     	p1.start()		
     	while True:
-				word = input("Enter a message to write:")
-				ser.write(bytes(" " + word + "\n", encoding ='utf-8'))
+    		word = input("Enter a message to write:")
+    		ser.write(bytes(" " + word + "\n", encoding ='utf-8'))
     except:
     	pass
     finally:
