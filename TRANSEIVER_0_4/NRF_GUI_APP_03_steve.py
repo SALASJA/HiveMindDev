@@ -14,16 +14,16 @@ import tkinter.ttk as ttk
 # this port address is for the serial tx/rx pins on the GPIO header
 #SERIAL_PORT = ports
 # be sure to set this to the same rate used on the Arduino
+"""
 
-PORT_STRING = "/dev/tty.wchusbserial*"
+/dev/tty.usbserial-1410
+/dev/disk1s5				/dev/tty.usbserial-1430
+"""
+PORT_STRING = "/dev/tty.usbserial*"
+#PORT_STRING = "/dev/tty.wchusbserial*"
 SERIAL_RATE = 9600
 CLOSABLE = {}
 OPEN_PROCESSES = {}
-REGULAR_MESSAGING = 0  #because of the menu this is redundant for now but that will change
-SET_TX_ADDRESS = 1
-SET_RX_ADDRESS = 2
-GET_TX_ADDRESS = 3
-GET_RX_ADDRESS = 4
 
 def receivingMessages(serial_port, queue):
 	cant_decode = False
@@ -51,7 +51,7 @@ class Messaging:
 		self.to_verify = []
 		
 	def closeSerialPort(self):
-		if self.serialPort != None:
+		if self.serialPort != None:    #i can see a problem if needing to change serial ports
 			self.receiving.join()
 			self.serialPort.close()
 			del OPEN_PROCESSES["serial_port"]
@@ -81,10 +81,8 @@ class Messaging:
 		message = None
 		if self.receive_queue != None and not self.receive_queue.empty():
 			message = self.receive_queue.get()
-			if "ADDRESS:" in message:
-				return message
 			print(message)
-			l = message.index(':') + 1                     #may need to remove this since its redundant now, has a part to process the address coming in
+			l = message.index(':') + 1
 			if "\\x" in message:
 				message = message[l:len(message) - 3]
 			else:
@@ -121,10 +119,6 @@ class Controller:
 		label["text"] = serial_port_name
 		if serial_port_name != "None selected":
 			self.model.openSerialPort(serial_port_name)
-			self.model.sendMessage(GET_TX_ADDRESS) #having an object oriented model would make this better
-			time.sleep(0.5)
-			self.model.sendMessage(GET_RX_ADDRESS)
-			time.sleep(0.5)
 			
 	
 	def __updatePortList(self):
@@ -157,7 +151,7 @@ class Controller:
 	
 	def __getMessages(self):
 		message = self.model.receiveMessage()
-		if message != None and "ADDRESS:" not in message:
+		if message != None:
 			text_widget = self.view.getWidget("text_widget")
 			message = message.strip()
 			self.model.incrementMessageNumber()
@@ -165,16 +159,6 @@ class Controller:
 			text_widget.config(state="normal")
 			text_widget.insert(END, str(number) + "\t" + message + "\n")
 			text_widget.config(state=DISABLED)
-		else:
-			l = message.index(':') + 1
-			if "\\x" in message:
-				message = message[l:len(message) - 3]  ################################PROBLEM HERE AT THIS POINYT WE NEED AN OBJECT ORIENTED MODEL OF THE TRANSEIVER
-			else:
-				r = message.index('\\')
-				message = message[l:r]
-			#tx_address_label = 
-			
-			
 		window = self.view.getWidget("window")
 		window.after(50, self.__getMessages)
 	
@@ -284,15 +268,10 @@ class GUI_View:
 	def __constructTranseiverModeFrame(self, messaging_area_frame):
 		transeiver_mode_frame = Frame(messaging_area_frame)
 		self.widgets["transeiver_mode_frame"] = transeiver_mode_frame
-		self.__constructTranseiverModeOptionsFrame(transeiver_mode_frame)
-		self.__constructTXAddressFrame(transeiver_mode_frame)
-		self.__constructRXAddressFrame(transeiver_mode_frame)
-		self.__constructAddressWriteButton(transeiver_mode_frame)
+		self.__constructTranseiverModeOptions(transeiver_mode_frame)
 		transeiver_mode_frame.pack(side = TOP)
 	
-	def __constructTranseiverModeOptionsFrame(self, transeiver_mode_frame): # this will be repurposed
-		mode_options_frame = Frame(transeiver_mode_frame)
-		self.widgets["mode_options_frame"] = mode_options_frame
+	def __constructTranseiverModeOptions(self, transeiver_mode_frame):
 		modes = ['sending',\
 		         'set Transmitting Address',\
 		         'set Receiving Address',\
@@ -307,53 +286,9 @@ class GUI_View:
 			i = i + 1
 		self.widgets["modes_dict"] = modes_dict
 		mode.set(modes[0]) # default value
-		transeiverModeOptionMenu = OptionMenu(mode_options_frame, mode, *modes)
+		transeiverModeOptionMenu = OptionMenu(transeiver_mode_frame, mode, *modes)
 		self.widgets["transeiverModeOptionMenu"] = transeiverModeOptionMenu
 		transeiverModeOptionMenu.pack(side = TOP)
-		mode_options_frame.pack(side = LEFT)
-	
-	def __constructTXAddressFrame(self,transeiver_mode_frame):
-		tx_address_frame = Frame(transeiver_mode_frame)
-		self.widgets["tx_address_frame"] = tx_address_frame
-		self.__constructTXAddressEntry(tx_address_frame)
-		self.__constructTXAddressLabel(tx_address_frame)
-		tx_address_frame.pack(side = LEFT)
-	
-	def __constructTXAddressEntry(self,tx_address_frame):
-		tx_address = StringVar()
-		self.widgets["tx_address"] = tx_address
-		tx_address_entry = Entry(tx_address_frame, textvariable = tx_address)
-		self.widgets["tx_address_entry"] = tx_address_entry
-		tx_address_entry.pack()
-	
-	def __constructTXAddressLabel(self,tx_address_frame):
-		tx_address_label = Label(tx_address_frame, text = "TO:", anchor=W, justify=LEFT)
-		self.widgets["tx_address_label"] = tx_address_label
-		tx_address_label.pack(fill=X)
-
-	def __constructRXAddressFrame(self,transeiver_mode_frame):
-		rx_address_frame = Frame(transeiver_mode_frame)
-		self.widgets["rx_address_frame"] = rx_address_frame
-		self.__constructRXAddressEntry(rx_address_frame)
-		self.__constructRXAddressLabel(rx_address_frame)
-		rx_address_frame.pack(side = LEFT)
-
-	def __constructRXAddressEntry(self,rx_address_frame):
-		rx_address = StringVar()
-		self.widgets["tx_address"] = rx_address
-		rx_address_entry = Entry(rx_address_frame, textvariable = rx_address)
-		self.widgets["tx_address_entry"] = rx_address_entry
-		rx_address_entry.pack()
-	
-	def __constructRXAddressLabel(self,rx_address_frame):
-		rx_address_label = Label(rx_address_frame, text = "FROM:", anchor=W, justify=LEFT)
-		self.widgets["tx_address_label"] = rx_address_label
-		rx_address_label.pack(fill=X)
-	
-	def __constructAddressWriteButton(self,transeiver_mode_frame):
-		address_write_button = Button(transeiver_mode_frame, text = "set addresses")
-		self.widgets["address_write_button"] = address_write_button
-		address_write_button.pack(side = LEFT)
 		
 	def __constructTextAreaFrame(self, messaging_area_frame):
 		text_frame = Frame(messaging_area_frame)
@@ -361,7 +296,6 @@ class GUI_View:
 		
 		text_widget = Text(text_frame)
 		self.widgets["text_widget"] = text_widget
-		text_widget.config(state=DISABLED)
 		
 		scroll_bar = ttk.Scrollbar(text_frame, command = text_widget.yview)
 		self.widgets["scroll_bar"] = scroll_bar
@@ -409,9 +343,9 @@ class GUI:
 		
 		
 def main():
-	#try:
-	GUI()
-	"""
+	try:
+		GUI()
+	
 	except:
 		pass
 	finally:
@@ -419,7 +353,6 @@ def main():
 			CLOSABLE[closable].close()
 		for process in OPEN_PROCESSES:
 			OPEN_PROCESSES[process].terminate()
-	"""
 	
 
 if __name__ == "__main__":
