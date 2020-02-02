@@ -18,7 +18,9 @@ SERIAL_RATE = 9600
 def printing(ser):
 	while True:
 		reading = ser.readline()
-		print(reading)
+		reading = str(reading)
+		if "STATE:" in reading or "INVALID STATE:" in reading or "SUCCESS:" in reading :
+			print(reading)
 
 def main():
     ser = None
@@ -28,8 +30,8 @@ def main():
     	p1 = multiprocessing.Process(target = printing, args = (ser,))
     	p1.start()		
     	while True:
-				word = input("Enter a message to write:")
-				ser.write(bytes(" " + word + "\n", encoding ='utf-8'))
+    		word = input("Enter a message to write:")
+    		ser.write(bytes(" " + word + "\n", encoding ='utf-8'))
     except:
     	pass
     finally:
