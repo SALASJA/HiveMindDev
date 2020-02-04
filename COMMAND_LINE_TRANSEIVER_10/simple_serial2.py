@@ -2,34 +2,6 @@ import serial
 import glob
 import multiprocessing
 
-class CentralNode:
-	__MESSAGING = 0
-	__SET_TX_ADDRESS = 1
-	__SET_RX_ADDRESS = 2
-	__GET_TX_ADDRESS = 3
-	__GET_RX_ADDRESS = 4
-	
-	def __init__(self, TXaddress = "00000", RXaddress = "11111", SERIAL_PORT_NAME = None, BAUD_RATE = 9600):
-		self.__serial_port = None
-		self.TXaddress = TXaddress
-		self.RXaddress = RXaddress
-		self.__fetchMessagesProcess = None
-		if SERIAL_PORT_NAME != None:
-			self.__setConnection(SERIAL_PORT_NAME, BAUD_RATE)
-	
-	def __setConnection(self, SERIAL_PORT_NAME, BAUD_RATE):
-		self.serial_port = serial.Serial(SERIAL_PORT_NAME, BAUD_RATE)
-		self.serial_port.write(bytes(CentralNode.__SET_TX_ADDRESS + self.TXaddress,encoding = 'utf-8'))
-		self.serial_port.write(bytes(CentralNode.__GET_TX_ADDRESS, encoding = 'utf-8'))
-		self.TXaddress = str(self.serial_port.readline())
-		print(self.TXaddress)
-		self.serial_port.write(bytes(CentralNode.__SET_RX_ADDRESS + self.RXaddress,encoding = 'utf-8'))
-		self.serial_port.write(bytes(CentralNode.__GET_RX_ADDRESS, encoding = 'utf-8'))
-		self.RXaddress = str(self.serial_port.readline())
-		print(self.RXaddress)
-		
-
-
 def main():
 	greet()
 	instructions()
