@@ -72,7 +72,9 @@ int main()
 				printf("RECEIVED:%s\n",receive_buffer);
         	}
         	
+        	
         }
+        printf("working?\n");
 		/* Or you might want to power down after TX */
 		// nrf24_powerDown();            
 		/* Wait a little ... */
