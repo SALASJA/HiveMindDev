@@ -48,7 +48,7 @@ def printing(ser):         #gets the receiving messages in a parallel process
 		print("\nEnter a message to write:",end="")
 
 def getAvailablePorts():
-	ports = glob.glob("/dev/tty.wchusbserial*")  #gets a list of ports
+	ports = glob.glob("/dev/tty.usbserial-1410")  #gets a list of ports
 	while(len(ports) == 0):
 		end = input("Enter 0 if you want to exit the program, otherwise plug in a board and enter a different value: ")
 		if(end == '0'):
