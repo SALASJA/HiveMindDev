@@ -5,8 +5,8 @@ import time
 import multiprocessing
 import curses
 
-ports = glob.glob("/dev/tty.wchusbserial*")[0]
-all_ports =  glob.glob("/dev/tty.wchusbserial*")
+ports = glob.glob("/dev/tty.usbserial*")[0]
+all_ports =  glob.glob("/dev/tty.usbserial*")
 print(all_ports)
 
 # this port address is for the serial tx/rx pins on the GPIO header
@@ -19,14 +19,19 @@ def printing(ser):
 	while True:
 		reading = ser.readline()
 		reading = str(reading)
+<<<<<<< HEAD
+		#if reading != "b''":
+		print(reading)
+=======
 		if "STATE:" in reading or "INVALID STATE:" in reading or "SUCCESS:" in reading :
 			print(reading)
+>>>>>>> a189092872b7112c92c89f2ddd32cedb13126bd7
 
 def main():
     ser = None
     p1 = None
     try:
-    	ser = serial.Serial(SERIAL_PORT, SERIAL_RATE)
+    	ser = serial.Serial(SERIAL_PORT, SERIAL_RATE, timeout = 0)
     	p1 = multiprocessing.Process(target = printing, args = (ser,))
     	p1.start()		
     	while True:
