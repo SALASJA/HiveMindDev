@@ -12,8 +12,11 @@ def main():
 		p1 = multiprocessing.Process(target = printing, args = (ser,)) #running in parallel to main process this function, function processing in parallel
 		p1.start()		#starts parallel process
 		while True:
-			word = input("Enter a message to write:")  #gets user input
+			word = input("Input:")  #gets user input
 			ser.write(bytes(word + "\r", encoding ='utf-8')) #writes bytes to serial port for board to pick up and use
+			byte = ser.readline()
+			print(byte)
+			print(word)
 	except Exception as e:
 		print(e)
 	finally:
@@ -36,7 +39,7 @@ def printing(ser):         #gets the receiving messages in a parallel process
 	while True:
 		
 		reading = ser.readline()
-		#reading = ser.read_until('hello', size=8)
+		reading = ser.read_until('b''', size=1)
 		reading = str(reading)
 		try:                                          #if you remove the try except and type clear, the INVALID state message will cause reading.index(':') to throw an exception
 			l = reading.index(':') + 1
@@ -47,12 +50,12 @@ def printing(ser):         #gets the receiving messages in a parallel process
 				reading = reading[l:r]
 		except:
 			pass
-		print(str(reading)) 
-		if str((reading) == 'b'''):
+		#print(str(reading)) 
+		#if str((reading) == 'b'''):
 			#print("HELLO")
-			break
-		print("\r" + str(reading) + (" " * 50))
-		print("\nEnter a message to write:",end="")
+			#break
+		#print("\r" + str(reading) + (" " * 50))
+
 		
 def getAvailablePorts():
 	ports = glob.glob("/dev/tty.usbserial*")  #gets a list of ports

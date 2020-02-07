@@ -27,6 +27,36 @@
         android:scrollbars="vertical"
         android:gravity="bottom" />
 
+    <RadioGroup
+        android:id="@+id/radioGroup"
+        android:layout_width="395dp"
+        android:layout_height="30dp"
+        android:layout_below="@id/textView1"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/radioButton5"
+            android:layout_width="99dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Message" />
+
+        <RadioButton
+            android:id="@+id/radioButton6"
+            android:layout_width="154dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="SetTxAddress" />
+
+        <RadioButton
+            android:id="@+id/radioButton7"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="SetRxAddress" />
+
+    </RadioGroup>
+
     <EditText
         android:id="@+id/editText1"
         android:layout_width="wrap_content"
@@ -35,7 +65,9 @@
         android:layout_alignRight="@+id/textView1"
         android:layout_below="@+id/textView1"
         android:layout_marginTop="28dp"
-        android:ems="10">
+        android:ems="10"
+        android:inputType="textMultiLine"
+        android:imeOptions="actionSend">
 
         <requestFocus/>
     </EditText>
@@ -50,4 +82,5 @@
         android:layout_below="@+id/editText1"
         android:layout_marginTop="42dp"
         android:text="Send"/>
+
 </RelativeLayout>
