@@ -12,9 +12,12 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
+import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -52,6 +55,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView display;
     private EditText editText;
     private MyHandler mHandler;
+    private RadioGroup radioGroup;
+    private RadioButton radioButton;
     private final ServiceConnection usbConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName arg0, IBinder arg1) {
@@ -74,20 +79,50 @@ public class MainActivity extends AppCompatActivity {
 
         display = (TextView) findViewById(R.id.textView1);
         editText = (EditText) findViewById(R.id.editText1);
+        radioGroup = (RadioGroup) findViewById(R.id.radioGroup);
+
+        editText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
+                if (keyEvent == null || keyEvent.getAction() != KeyEvent.ACTION_DOWN)
+                    return false;
+                sendMessage();
+                return true;
+            }
+        });
         Button sendButton = (Button) findViewById(R.id.buttonSend);
         sendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (!editText.getText().toString().equals("")) {
-                    String data = editText.getText().toString();
-                    data = data + "\r";
-                    if (usbService != null) { // if UsbService was correctly binded, Send data
-                        usbService.write(data.getBytes());
-                    }
-                }
+                sendMessage();
             }
         });
     }
+
+    public void sendMessage(){
+        int radioId = radioGroup.getCheckedRadioButtonId();
+        radioButton = findViewById(radioId);
+        String message_type = "";
+        if(radioButton.getText().equals("Message")){
+            message_type = "0";
+        }
+        else if(radioButton.getText().equals("SetTxAddress")){
+            message_type = "1";
+        }
+        else if(radioButton.getText().equals("SetRxAddress")){
+            message_type = "2";
+        }
+
+        if (!editText.getText().toString().equals("")) {
+            String data = editText.getText().toString();
+            data = message_type + data + "\r";
+            if (usbService != null) { // if UsbService was correctly binded, Send data
+                usbService.write(data.getBytes());
+            }
+        }
+    }
+
+
 
     @Override
     public void onResume() {
