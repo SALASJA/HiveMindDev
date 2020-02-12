@@ -79,7 +79,8 @@ def format_received(reading):
 	return reading
 		
 def getAvailablePorts():
-	ports = glob.glob("/dev/tty.wchusbserial*")  #gets a li
+	#ports = glob.glob("/dev/tty.wchusbserial*")  #gets a li
+	ports = glob.glob("/dev/tty.usbserial*")
 	while(len(ports) == 0):
 		end = input("Enter 0 if you want to exit the program, otherwise plug in a board and enter a different value: ")
 		if(end == '0'):
