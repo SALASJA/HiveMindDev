@@ -88,7 +88,8 @@
 
 /* RF setup register */
 #define PLL_LOCK    4
-#define RF_DR       3
+#define RF_DR_HIGH  3
+#define RF_DR_LOW   5
 #define RF_PWR      1 /* 2 bits */   
 
 /* general status register */

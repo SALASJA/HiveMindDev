@@ -23,8 +23,7 @@
 
     $Id$
 */
-#ifndef NRF24L01_H
-#define NRF24L01_H
+
 /* Memory Map */
 #define CONFIG      0x00
 #define EN_AA       0x01
@@ -129,5 +128,3 @@
 #define ACTIVATE      0x50 
 #define R_RX_PL_WID   0x60
 #define NOP           0xFF
-
-#endif
