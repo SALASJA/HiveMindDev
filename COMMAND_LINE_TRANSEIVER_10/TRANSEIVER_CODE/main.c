@@ -19,7 +19,7 @@ uint8_t data_buffer_index = 0;
 uint8_t receiving = FALSE;
 uint8_t tx_address[5] = {'?','?','?','?','?'};
 uint8_t rx_address[5] = {'!','!','!','!','!'};
-uint8_t success_mode = FALSE;         //I feel success mode should automatically be off
+uint8_t success_mode = TRUE;         //I feel success mode should automatically be off
 char success[32] = "<<<success>>>";//13
 char prev_data[32];
 
