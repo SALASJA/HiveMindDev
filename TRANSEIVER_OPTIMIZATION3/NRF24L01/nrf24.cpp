@@ -6,13 +6,58 @@ Nrf24::Nrf24(){
 }
 
 void Nrf24::init(){
-		set_CE_LOW();
-		set_CSN_HIGH();	
+		standardSPIPinInit();
+		set_CE(LOW);
+		set_CSN(HIGH);
+}
+
+void Nrf24::standardConfig(){
+	payload_len = 32;
+    
+    configRegister(RF_CH,2);
+	configRegister(SETUP_AW, 0x03); //decides the address width its 5 bytes by default
+    // Set length of incoming payload 
+    for(int i = 0; i < 6; i++){
+    	set_RX_address(RX_ADDR_P_VAL[i], i);
+    }
+    set_TX_address(TX_ADDR_VAL);
+    configRegister(RX_PW_P0, payload_len); // Auto-ACK pipe ... defaulting to 32 for now
+    configRegister(RX_PW_P1, payload_len); // Data payload pipe
+    configRegister(RX_PW_P2, payload_len); // Pipe not used 
+    configRegister(RX_PW_P3, payload_len); // Pipe not used 
+    configRegister(RX_PW_P4, payload_len); // Pipe not used 
+    configRegister(RX_PW_P5, payload_len); // Pipe not used 
+
+    // 250 kbps, TX gain: 0dbm already at max       
+    configRegister(RF_SETUP, (0 << RF_DR_HIGH)|((0x03)<<RF_PWR)); //this not configuring right?
+
+    // CRC enable, 1 byte CRC length
+    configRegister(CONFIG,nrf24_CONFIG); //this looks like an error ((1<<EN_CRC)|(0<<CRCO))
+    
+
+    // Auto Acknowledgment
+    configRegister(EN_AA,(0<<ENAA_P0)|(0<<ENAA_P1)|(0<<ENAA_P2)|(0<<ENAA_P3)|(0<<ENAA_P4)|(0<<ENAA_P5)); //might need to create an interrupt
+
+    // Enable RX addresses
+    configRegister(EN_RXADDR,(1<<ERX_P0)|(1<<ERX_P1)|(1<<ERX_P2)|(1<<ERX_P3)|(1<<ERX_P4)|(1<<ERX_P5));
+
+    // Auto retransmit delay: 1000 us and Up to 15 retransmit trials
+    //configRegister(SETUP_RETR,(0x04<<ARD)|(0x0F<<ARC));
+	
+    // Dynamic length configurations: No dynamic length
+    configRegister(DYNPD,(0<<DPL_P0)|(0<<DPL_P1)|(0<<DPL_P2)|(0<<DPL_P3)|(0<<DPL_P4)|(0<<DPL_P5));
+
+    // Start listening
+    //powerUpRx();
+	
 }
 
 void Nrf24::set_RX_address(uint8_t * adr, uint8_t pipe){
-	set_CE_LOW();
+	set_CE(LOW);
 	switch(pipe){
+		case 0:
+				writeRegister(RX_ADDR_P0,adr,nrf24_ADDR_LEN);
+				break;
 		case 1:
 				writeRegister(RX_ADDR_P1,adr,nrf24_ADDR_LEN);
 				break;
@@ -32,14 +77,61 @@ void Nrf24::set_RX_address(uint8_t * adr, uint8_t pipe){
 				break;
 	} 
 
-	set_CE_HIGH();
+	set_CE(HIGH);
 
 }
+
+uint8_t * Nrf24::get_RX_address(uint8_t pipe){
+	static uint8_t buffer[5];
+	buffer[0] = 0;
+	buffer[1] = 0;
+	buffer[2] = 0;
+	buffer[3] = 0;
+	buffer[4] = 0;
+	switch(pipe){
+		case 0: readRegister(RX_ADDR_P0, buffer, 5);
+				break;
+		case 1: readRegister(RX_ADDR_P1, buffer, 5);
+				break;
+		case 2: readRegister(RX_ADDR_P2, buffer + 4, 1);
+				break;
+		case 3: readRegister(RX_ADDR_P3, buffer + 4, 1);
+				break;
+		case 4: readRegister(RX_ADDR_P4, buffer + 4, 1);
+				break;
+		case 5: readRegister(RX_ADDR_P5, buffer + 4, 1);
+				break;
+		default:
+	}
+	static uint8_t * buffer_ptr = (uint8_t *) buffer;
+	return buffer_ptr;
+}
+
 
 void Nrf24::set_TX_address(uint8_t* adr){
 	/* RX_ADDR_P0 must be set to the sending addr for auto ack to work. */
 	writeRegister(RX_ADDR_P0,adr,nrf24_ADDR_LEN); 
 	writeRegister(TX_ADDR,adr,nrf24_ADDR_LEN);
+}
+
+uint8_t * Nrf24::get_TX_address(){
+	static uint8_t buffer[5];
+	readRegister(TX_ADDR, buffer, 5);
+	static uint8_t * buffer_ptr = (uint8_t *) buffer;
+	return buffer_ptr;
+}
+
+
+uint8_t Nrf24::isReceiving(){
+	return receiving;
+}
+
+uint8_t Nrf24::isSuccessMode(){
+	return success_mode;
+}
+
+void Nrf24::setSuccessMode(uint8_t value){
+	success_mode = value;
 }
 
 /* state check functions */
@@ -85,9 +177,9 @@ uint8_t Nrf24::isSending()
 uint8_t Nrf24::getStatus()
 {
 	uint8_t rv;
-	set_CSN_LOW();
+	set_CSN(LOW);
 	rv = spi_transfer(NOP);
-	set_CSN_HIGH();
+	set_CSN(HIGH);
 	return rv;
 }
 
@@ -95,7 +187,7 @@ uint8_t Nrf24::getStatus()
 /* core TX / RX functions */
 void Nrf24::send(uint8_t* value) {    
 	/* Go to Standby-I first */
-	set_CE_LOW();
+	set_CE(LOW);
 
 	/* Set to transmitter mode , Power up if needed */
 	powerUpTx();
@@ -103,17 +195,17 @@ void Nrf24::send(uint8_t* value) {
 	/* Do we really need to flush TX fifo each time ? */
 	#if 1
 		/* Pull down chip select */
-		set_CSN_LOW()           
+		set_CSN(LOW);           
 
 		/* Write cmd to flush transmit FIFO */
 		spi_transfer(FLUSH_TX);     
 
 		/* Pull up chip select */
-		set_CSN_HIGH();                  
+		set_CSN(HIGH);                  
 	#endif 
 
 	/* Pull down chip select */
-	set_CSN_LOW();
+	set_CSN(LOW);
 
 	/* Write cmd to write payload */
 	spi_transfer(W_TX_PAYLOAD);
@@ -122,16 +214,16 @@ void Nrf24::send(uint8_t* value) {
 	transmitSync(value,payload_len);   
 
 	/* Pull up chip select */
-	set_CSN_HIGH();
+	set_CSN(HIGH);
 
 	/* Start the transmission */
-	set_CE_HIGH();    
+	set_CE(HIGH);    
 }
 
 
 void Nrf24::getData(uint8_t* data) {
 	/* Pull down chip select */
-	set_CSN_LOW();                              
+	set_CSN(LOW);                              
 
 	/* Send cmd to read rx payload */
 	spi_transfer( R_RX_PAYLOAD );
@@ -140,21 +232,12 @@ void Nrf24::getData(uint8_t* data) {
 	transferSync(data,data,payload_len);
 
 	/* Pull up chip select */
-	set_CSN_HIGH();
+	set_CSN(HIGH);
 
 	/* Reset status register */
 	configRegister(STATUS,(1<<RX_DR));   
 }
 
-/* use in dynamic length mode */
-uint8_t Nrf24::payloadLength(){
-	uint8_t status;
-	set_CSN_LOW();
-	spi_transfer(R_RX_PL_WID);
-	status = spi_transfer(0x00);
-	set_CSN_HIGH();
-	return status;
-}
 
 /* post transmission analysis */
 uint8_t Nrf24::lastMessageStatus()
@@ -193,27 +276,29 @@ uint8_t Nrf24::retransmissionCount()
 uint8_t Nrf24::payloadLength()
 {
 	uint8_t status;
-	set_CSN_LOW();
+	set_CSN(LOW);
 	spi_transfer(R_RX_PL_WID);
 	status = spi_transfer(0x00);
-	set_CSN_HIGH();
+	set_CSN(HIGH);
 	return status;
 }
 
 /* power management */
-void Nrf24::powerUpRx(){     
-	set_CSN_LOW();
+void Nrf24::powerUpRx(){
+	receiving = TRUE;   
+	set_CSN(LOW);
 	spi_transfer(FLUSH_RX);
-	set_CSN_HIGH();
+	set_CSN(HIGH);
 
 	configRegister(STATUS,(1<<RX_DR)|(1<<TX_DS)|(1<<MAX_RT)); 
 
-	set_CE_LOW();
+	set_CE(LOW);
 	configRegister(CONFIG,nrf24_CONFIG|((1<<PWR_UP)|(1<<PRIM_RX)));    
-	set_CE_HIGH();
+	set_CE(HIGH);
 }
 void Nrf24::powerUpTx()
 {
+	receiving = FALSE;
 	configRegister(STATUS,(1<<RX_DR)|(1<<TX_DS)|(1<<MAX_RT)); 
 
 	configRegister(CONFIG,nrf24_CONFIG|((1<<PWR_UP)|(0<<PRIM_RX)));
@@ -221,7 +306,7 @@ void Nrf24::powerUpTx()
 
 void Nrf24::powerDown()
 {
-	set_CE_LOW();
+	set_CE(LOW);
 	configRegister(CONFIG,nrf24_CONFIG);
 }
 
@@ -252,26 +337,26 @@ void Nrf24::transmitSync(uint8_t* dataout,uint8_t len)
 /* Clocks only one byte into the given nrf24 register */
 void Nrf24::configRegister(uint8_t reg, uint8_t value)
 {
-	set_CSN_LOW();
+	set_CSN(LOW);
 	spi_transfer(W_REGISTER | (REGISTER_MASK & reg));
 	spi_transfer(value);
-	set_CSN_HIGH();
+	set_CSN(HIGH);
 }
 
 /* Read single register from nrf24 */
 void Nrf24::readRegister(uint8_t reg, uint8_t* value, uint8_t len)
 {
-	set_CSN_LOW();
+	set_CSN(LOW);
 	spi_transfer(R_REGISTER | (REGISTER_MASK & reg));
 	transferSync(value,value,len);
-	set_CSN_HIGH();
+	set_CSN(HIGH);
 }
 
 /* Write to a single register of nrf24 */
 void Nrf24::writeRegister(uint8_t reg, uint8_t* value, uint8_t len) 
 {
-	set_CSN_LOW();
+	set_CSN(LOW);
 	spi_transfer(W_REGISTER | (REGISTER_MASK & reg));
 	transmitSync(value,len);
-	set_CSN_HIGH();
+	set_CSN(HIGH);
 }

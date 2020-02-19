@@ -1,25 +1,25 @@
 #ifndef NRF24_H
 #define NRF24_H
 
-#ifdef __cplusplus
+
 extern "C"{
-#endif
-
-#include "nRF24L01.h"
 #include "../SPI/spi.h"
+#include "nRF24L01.h"
 #include <stdint.h>
-
-#ifdef __cplusplus
 }
-#endif
+#include util.h
 
 
-#define NRF24_TRANSMISSON_OK 0
-#define NRF24_MESSAGE_LOST   1
 
 class Nrf24{
 	public:
+		uint8_t receiving = FALSE;
+		uint8_t success_mode = TRUE; //not a property of the transceiver though I should just extend the class 
 		uint8_t payload_len = 32;
+		uint8_t nrf24_ADDR_LEN  = 5;
+		uint8_t NRF24_TRANSMISSON_OK  = 0;
+		uint8_t NRF24_MESSAGE_LOST  = 1;
+		uint8_t nrf24_CONFIG  = (1<<EN_CRC)|(0<<CRCO);
 		uint8_t TX_ADDR_VAL[5] = {'1','!','!','!','!'};
 		uint8_t RX_ADDR_P_VAL[6][5] = {{'1','!','!','!','!'}, //it has to be backwards
                               		   {'6','!','!','!','!'},
@@ -32,9 +32,54 @@ class Nrf24{
 		
 		void init();
 		
-		void set_RX_address(uint8_t * adr, uint8_t pipe);
+		void standardConfig();
 		
-		void set_TX_address(uint8_t* adr);
+		void set_RX_address(uint8_t * adr, uint8_t pipe);
+		uint8_t * get_RX_address();
+		
+		void set_TX_address(uint8_t * adr);
+		uint8_t * get_TX_address();
+		
+		void set_CONFIG_Register(uint8_t value);
+		uint8_t get_CONFIG_Register();
+		
+		void set_EN_AA_Register(uint8_t * adr);
+		uint8_t get_EN_AA_Register();
+		
+		void set_EN_RXADDR_Register(uint8_t value);
+		uint8_t get_EN_RXADDR_Register();
+		
+		void set_SETUP_AW_Register(uint8_t value);
+		uint8_t get_SETUP_AW_Register();
+		
+		void set_SETUP_RETR_Register(uint8_t value);
+		uint8_t get_SETUP_RETR_Register();
+		
+		void set_RF_CH_Register(uint8_t value);
+		uint8_t get_RF_CH_Register();
+		
+		void set_RF_SETUP_Register(uint8_t value);
+		uint8_t get_RF_SETUP_Register();
+		
+		void set_STATUS_Register(uint8_t value);
+		uint8_t get_STATUS_Register();
+		
+		void set_OBSERVE_TX_Register(uint8_t value);
+		uint8_t get_OBSERVE_TX_Register();
+		
+		void set_RX_PW_PN_Register(uint8_t value, uint8_t pipe);
+		uint8_t get_RX_PW_PN_Register(uint8_t pipe);
+		
+		
+		
+		
+		
+		
+		
+		uint8_t isReceiving();
+		
+		uint8_t isSuccessMode();
+		void setSuccessMode(uint8_t value);
 
 		/* state check functions */
 		uint8_t dataReady();
@@ -50,8 +95,6 @@ class Nrf24{
 		
 		void getData(uint8_t* data);
 
-		/* use in dynamic length mode */
-		uint8_t payloadLength();
 
 		/* post transmission analysis */
 		uint8_t lastMessageStatus();
