@@ -149,33 +149,45 @@ void process_uart_input(Nrf24 &transeiver, uint8_t * data_buffer){
 }
 void process_recieved(Nrf24 &transeiver, uint8_t * receive_buffer){
 	static uint8_t success[32] = "<<<success>>>";
+	static uint8_t address[32] = "3";
+	static uint8_t sent_address = FALSE;
+	static uint8_t receive_address = FALSE;
 	switch(receive_buffer[0]){
 		case '0': PORTD ^= 1 << 5;
 				  break;
 		case '1': transeiver.setSuccessMode(!transeiver.isSuccessMode());
 		          break;
-		case '2': //send to other node propogation
+		case '2': transeiver.set_TX_Address(receive_buffer + 1);
+		          copy(transeiver.RX_ADDR_P_VAL[0], address + 1);
+		          transeiver.send(address);
+		          transeiver.set_TX_Address(transeiver.TX_ADDR_VAL);
+		          sent_address = TRUE;
+				  break;
+		case '3': print_address(receive_buffer + 1);
+				  receive_buffer = TRUE;
 				  break;
 		default :
 			      break; //dummy statement need to make a new return statement
 	}
-	if(transeiver.isSuccessMode()){
-		if(is_success(receive_buffer, success)){
-			printf("SUCCESS:%s\n",success);
-		}else{
-			printf("RECEIVED:%s\n",receive_buffer); //bytes 0-9 need to be removed by program
+	if(!sent_address && !receive_address){
+		if(transeiver.isSuccessMode()){
+			if(is_success(receive_buffer, success)){
+				printf("SUCCESS:%s\n",success);
+			}else{
+				printf("RECEIVED:%s\n",receive_buffer); //bytes 0-9 need to be removed by program
 			
-			//for(uint8_t i = 0; i < 5; i++){
-			//	success[13 + i] = rx_address[1][i]; //dummy address 1
-			//}
-			//success[18] = (PIND && (1 << 5)) + 48; //move this feature somewhere else
-			//success[19] = 0;
-			transeiver.send(success);
+				//for(uint8_t i = 0; i < 5; i++){
+				//	success[13 + i] = rx_address[1][i]; //dummy address 1
+				//}
+				//success[18] = (PIND && (1 << 5)) + 48; //move this feature somewhere else
+				//success[19] = 0;
+				transeiver.send(success);
 			
+			}
 		}
-	}
-	else{
-		printf("RECEIVED:%s\n",receive_buffer);
+		else{
+			printf("RECEIVED:%s\n",receive_buffer);
+		}
 	}
 }
 
@@ -188,6 +200,15 @@ uint8_t is_success(uint8_t * receive, uint8_t * success){
 		}
 	}
 	return TRUE;
+}
+
+
+void print_address(uint8_t * address){
+	printf("ADDRESS:");
+	for(uint8_t i = 0; i < 5; i++){
+		USART_Transmit(buffer[i]);
+	}
+	USART_Transmit('\n');
 }
 
 void print_RX_address(Nrf24 &transeiver, uint8_t pipe){
