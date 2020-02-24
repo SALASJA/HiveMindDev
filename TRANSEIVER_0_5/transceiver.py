@@ -11,6 +11,7 @@ class Transceiver:
 	TOGGLE_SUCCESS_MODE = 5
 	GET_SUCCESS_MODE = 6
 	TOGGLE_LED = 7
+	FINDING = 8
 	FLUSH = '\r'   #should use something different
 	
 	def __init__(self, SERIAL_PORT_NAME = None, BAUD_RATE = 9600): # there might need to be a node ID nodeid = A, and tx = 00000 and rx = 11111
@@ -67,7 +68,7 @@ class Transceiver:
 					
 				if "b''" == original:
 					continue
-				print("\r" + reading + (" " * 50) + "\n")
+				print("\r" + original + (" " * 50) + "\n")
 				print("\nEnter a message to write:",end="")
 		except:
 			pass
@@ -95,14 +96,16 @@ class Transceiver:
 		return message
 	
 	def sendMessage(self, message):
-		if ord(message[0]) == Transeiver.MESSAGING:
+		if  ord(message[0]) == Transceiver.MESSAGING:
 			self.sendMediaMessage(message)
+		elif ord(message[0]) == Transceiver.FINDING:
+			self.finding(message[1:])
 		else:
 			self.send_queue.put(bytes(message + Transceiver.FLUSH,encoding = "utf-8"))
 			
 		
 	def sendMediaMessage(self, message): #this has a protocol to retransmit if fails through, yap I know its not using autoack
-		self.send_queue.put(bytes(message + Transeiver.FLUSH,encoding = "utf-8"))
+		self.send_queue.put(bytes(message + Transceiver.FLUSH,encoding = "utf-8"))
 		start = time.monotonic()
 		success = False
 		while time.monotonic() < start + 30:
@@ -117,6 +120,9 @@ class Transceiver:
 			print("message sent!")
 		else:
 			print("message fail")
+	
+	def finding(self, command):
+		pass
 				
 		
 	

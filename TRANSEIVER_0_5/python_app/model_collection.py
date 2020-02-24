@@ -61,6 +61,7 @@ class TransceiverInterface:
 		self.address_queue = None
 		self.file_queue = None
 		self.success_queue = None
+		self.id = None
 		if SERIAL_PORT_NAME != None:
 			self.startCommunicationProcess(SERIAL_PORT_NAME, BAUD_RATE)
 
@@ -119,10 +120,10 @@ class TransceiverInterface:
 		try:                                          #if you remove the try except and type clear, the INVALID state message will cause reading.index(':') to throw an exception
 			l = message.index(':') + 1
 			if "\\x" in message:
-				message = message[l:len(message) - 3]
+				message = message[l:len(message) - 2]
 			else:
 				r = message.index('\\')
-				message = message[l:r]
+				message = message[l:r + 1]
 		except Exception as e:
 			print(e)
 			message = copy_of_message

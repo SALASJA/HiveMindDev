@@ -157,14 +157,14 @@ void process_recieved(Nrf24 &transeiver, uint8_t * receive_buffer){
 				  break;
 		case '1': transeiver.setSuccessMode(!transeiver.isSuccessMode());
 		          break;
-		case '2': transeiver.set_TX_Address(receive_buffer + 1);
+		case '2': transeiver.set_TX_address(receive_buffer + 1);
 		          copy(transeiver.RX_ADDR_P_VAL[0], address + 1);
 		          transeiver.send(address);
-		          transeiver.set_TX_Address(transeiver.TX_ADDR_VAL);
+		          transeiver.set_TX_address(transeiver.TX_ADDR_VAL);
 		          sent_address = TRUE;
 				  break;
 		case '3': print_address(receive_buffer + 1);
-				  receive_buffer = TRUE;
+				  receive_address = TRUE;
 				  break;
 		default :
 			      break; //dummy statement need to make a new return statement
@@ -191,6 +191,11 @@ void process_recieved(Nrf24 &transeiver, uint8_t * receive_buffer){
 	}
 }
 
+void copy(uint8_t * buffer_1, uint8_t * buffer_2){
+	for(int i = 0; i < 5; i++){
+		buffer_2[i] = buffer_1[i];
+	}
+}
 
 uint8_t is_success(uint8_t * receive, uint8_t * success){
 	uint8_t i;
@@ -206,7 +211,7 @@ uint8_t is_success(uint8_t * receive, uint8_t * success){
 void print_address(uint8_t * address){
 	printf("ADDRESS:");
 	for(uint8_t i = 0; i < 5; i++){
-		USART_Transmit(buffer[i]);
+		USART_Transmit(address[i]);
 	}
 	USART_Transmit('\n');
 }

@@ -1,5 +1,5 @@
 import glob
-from transceiver import *
+from model_collection import TransceiverInterface
 
 def main():
     ports = glob.glob("/dev/tty.wchusbserial*")
@@ -11,10 +11,10 @@ def main():
     serial_port_name = ports[choice]
     #SERIAL_RATE = 9600
     #try:
-    transeiver = Transceiver(SERIAL_PORT_NAME = serial_port_name) #it locks up because stdin is closed it needs to be opened I think	
+    transeiver = TransceiverInterface(SERIAL_PORT_NAME = serial_port_name) #it locks up because stdin is closed it needs to be opened I think	
     while True:
     	word = input("Enter a message to write:")
-    	transeiver.sendMessage(chr(ord(word[0]) - ord("0")) + word[1:])
+    	transeiver.send(chr(ord(word[0]) - ord("0")) + word[1:])
     #except:	
     #	pass
 
