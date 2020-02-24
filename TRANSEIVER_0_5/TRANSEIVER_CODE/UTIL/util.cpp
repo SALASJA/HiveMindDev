@@ -104,43 +104,46 @@ void printRegisters(Nrf24 &transeiver){
 void process_uart_input(Nrf24 &transeiver, uint8_t * data_buffer){
 	uint8_t pipe = 0;
 	switch(data_buffer[0]){
-		case '0': {
+		case 0: {
 				  transeiver.send(data_buffer + 1); //make a macro to shift
 				  while(transeiver.isSending())
 					;
-				  } 
-				  break;
+				} 
+				break;
 			
-		case '1': transeiver.set_TX_address(data_buffer + 1);
-				  break;
+		case 1: transeiver.set_TX_address(data_buffer + 1);
+				break;
 				  
-		case '2': pipe = data_buffer[1] - '0';
-				  transeiver.set_RX_address(data_buffer + 2, pipe);	
-				  break;
+		case 2: pipe = data_buffer[1] - '0';
+				transeiver.set_RX_address(data_buffer + 2, pipe);	
+				break;
 				  
-		case '3': print_TX_address(transeiver);
-				  break;
+		case 3: print_TX_address(transeiver);
+				break;
 				  
-		case '4': pipe = data_buffer[1] - '0';
-				  print_RX_address(transeiver, pipe);
-				  break;
+		case 4: pipe = data_buffer[1] - '0';
+				print_RX_address(transeiver, pipe);
+				break;
 				  
-		case '5': transeiver.setSuccessMode(!transeiver.isSuccessMode());
-				  break;
-		case '6': { //get success mode
+		case 5: transeiver.setSuccessMode(!transeiver.isSuccessMode());
+				break;
+				
+		case 6: { //get success mode
 				    printf("STATE:");
 				    USART_Transmit(transeiver.isSuccessMode() + '0');
 				    USART_Transmit('\n');
-				  }
-				  break;
-		case '7': PORTD ^= 1 << 5;    //getting the state of whether a port is on would be cool, this is where stron designing of the c code will come on
-				  break;
-		case '8': //in python program this is for discover mode this is not meant to be implemented here
-				  break;
-		case '9': // in python program this is for finding mode, again not to be implemented
-				  break; // will add a polling mode I think a separate pipe should be dedicated for that
+				}
+				break;
+				
+		case 7: PORTD ^= 1 << 5;    //getting the state of whether a port is on would be cool, this is where stron designing of the c code will come on
+				break;
+		case 8: //in python program this is for discover mode this is not meant to be implemented here
+				break;
+		case 9: // in python program this is for finding mode, again not to be implemented
+				break; // will add a polling mode I think a separate pipe should be dedicated for that
 			  
-		default:  printf("INVALID STATE\n");
+		default:
+		        printf("INVALID STATE\n");
 			
 	}
 }
