@@ -1,0 +1,26 @@
+public class GenericExample{
+	public static void main(String[] args){
+		Datatype<>
+	}
+	
+	public static void greet(String message){
+		System.out.println("hello, " + message);
+	}
+}
+
+
+
+class Datatype<E>{
+	E value;
+	public DataType(E value){
+		this.value = value;
+	}
+	
+	public E getValue(){
+		return this.value; 
+	}
+	
+	public void setValue(E value){
+		this.value = value;
+	}
+}

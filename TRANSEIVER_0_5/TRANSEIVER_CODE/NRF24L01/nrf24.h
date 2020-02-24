@@ -6,7 +6,6 @@ extern "C"{
 #include "../SPI/spi.h"
 #include "nRF24L01.h"
 #include <stdint.h>
-#include <stdlib.h>
 }
 #define TRUE 1
 #define FALSE 0
@@ -22,10 +21,10 @@ class Nrf24{
 		uint8_t NRF24_TRANSMISSON_OK  = 0;
 		uint8_t NRF24_MESSAGE_LOST  = 1;
 		uint8_t nrf24_CONFIG  = (1<<EN_CRC)|(0<<CRCO);
-		uint8_t TX_ADDR_VAL[5] = {0,'!','!','!','!'};       //this is the ID of the transceiver, which is given in the python program
-		uint8_t RX_ADDR_P_VAL[6][5] = {{0,1,0,1,0}, //this can be unique
-                              		   {0,'!','!','!','!'}, //this pipe dedicated to finding addresses
-                               		   {'7','!','!','!','!'},  
+		uint8_t TX_ADDR_VAL[5] = {'1','!','!','!','!'};
+		uint8_t RX_ADDR_P_VAL[6][5] = {{'1','!','!','!','!'}, //it has to be backwards
+                              		   {'6','!','!','!','!'},
+                               		   {'7','!','!','!','!'},
                                        {'8','!','!','!','!'},
                                        {'9','!','!','!','!'},
                                        {'A','!','!','!','!'}};

@@ -6,9 +6,6 @@ Nrf24::Nrf24(){
 }
 
 void Nrf24::init(){
-		for(uint8_t i = 0; i < 5; i++){
-			RX_ADDR_P_VAL[0][i] = rand() % 255;
-		}
 		standardSPIPinInit();
 		set_CE(LOW);
 		set_CSN(HIGH);

@@ -125,7 +125,7 @@ void process_uart_input(Nrf24 &transeiver, uint8_t * data_buffer){
 				  print_RX_address(transeiver, pipe);
 				  break;
 				  
-		case '5': transeiver.setSuccessMode(!transeiver.getSuccessMode());
+		case '5': transeiver.setSuccessMode(!transeiver.isSuccessMode());
 				  break;
 		case '6': { //get success mode
 				    printf("STATE:");
@@ -145,11 +145,11 @@ void process_uart_input(Nrf24 &transeiver, uint8_t * data_buffer){
 	}
 }
 void process_recieved(Nrf24 &transeiver, uint8_t * receive_buffer){
-	static char success[32] = "<<<success>>>";
+	static uint8_t success[32] = "<<<success>>>";
 	switch(receive_buffer[0]){
 		case '0': PORTD ^= 1 << 5;
 				  break;
-		case '1': transeiver.setSuccessMode(!transeiver.getSuccessMode());
+		case '1': transeiver.setSuccessMode(!transeiver.isSuccessMode());
 		          break;
 		case '2': //send to other node propogation
 				  break;
@@ -187,7 +187,7 @@ uint8_t is_success(uint8_t * receive, uint8_t * success){
 	return TRUE;
 }
 
-uint8_t print_RX_address(Nrf24 &transeiver, uint8_t pipe){
+void print_RX_address(Nrf24 &transeiver, uint8_t pipe){
 	uint8_t * buffer = transeiver.get_RX_address(pipe);
 	printf("STATE:");
 	for(uint8_t i = 0; i < 5; i++){
@@ -196,7 +196,7 @@ uint8_t print_RX_address(Nrf24 &transeiver, uint8_t pipe){
 	USART_Transmit('\n');
 }
 
-uint8_t print_TX_address(Nrf24 &transeiver){
+void print_TX_address(Nrf24 &transeiver){
 	uint8_t * buffer = transeiver.get_TX_address();
 	printf("STATE:");
 	for(uint8_t i = 0; i < 5; i++){
