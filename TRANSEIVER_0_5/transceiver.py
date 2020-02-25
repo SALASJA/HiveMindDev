@@ -12,6 +12,8 @@ class Transceiver:
 	GET_SUCCESS_MODE = 6
 	TOGGLE_LED = 7
 	FINDING = 8
+	FINDING_ADDRESS = "\x00!!!!"
+	ADDRESS_RETURN = "3"
 	FLUSH = '\r'   #should use something different
 	
 	def __init__(self, SERIAL_PORT_NAME = None, BAUD_RATE = 9600): # there might need to be a node ID nodeid = A, and tx = 00000 and rx = 11111
@@ -22,6 +24,8 @@ class Transceiver:
 		self.address_queue = None
 		self.file_queue = None
 		self.success_queue = None
+		self.tx_address = None
+		self.rx_address = None
 		if SERIAL_PORT_NAME != None:
 			self.startCommunicationProcess(SERIAL_PORT_NAME, BAUD_RATE)
 
@@ -37,6 +41,26 @@ class Transceiver:
 	
 	def stopCommunicationProcess(self):
 		pass
+	
+	def get_TX_address(self):
+		return self.tx_address
+	
+	def set_TX_address(self, address):
+		self.send_queue(bytes(chr(TranscieverInterface.SET_TX_ADDRESS) + address + TranscieverInterface.FLUSH, encoding = "utf-8"))
+		self.send_queue(bytes(chr(TranscieverInterface.GET_TX_ADDRESS) + TranscieverInterface.FLUSH, encoding = "utf-8"))
+		while(self.state_queue.empty()):
+			pass
+		self.tx_address = self.state_queue.get()
+	
+	def get_RX_address(self):
+		return self.rx_address
+	
+	def set_RX_address(self, address):
+		self.send_queue(bytes(chr(TranscieverInterface.SET_RX_ADDRESS) + "0" + address + TranscieverInterface.FLUSH, encoding = "utf-8"))
+		self.send_queue(bytes(chr(TranscieverInterface.GET_RX_ADDRESS) + "0" + TranscieverInterface.FLUSH, encoding = "utf-8"))
+		while(self.state_queue.empty()):
+			pass
+		self.rx_address = self.state_queue.get()
 
 	@staticmethod
 	def communication(obj, SERIAL_PORT_NAME, BAUD_RATE,send_queue, receive_queue, state_queue, address_queue, success_queue):         #gets the receiving messages in a parallel process # this gets put under cases
@@ -122,7 +146,10 @@ class Transceiver:
 			print("message fail")
 	
 	def finding(self, command):
-		pass
+		self.send_queue.put(bytes(chr(TranscieverInterface.SET_TX_ADDRESS) + command + TranscieverInterface.FLUSH, encoding = "utf-8"))
+		start = time.monotonic()
+		while time.monotonic() < start + 30:
+			self.send_queue.put(bytes(chr(TranscieverInterface.MESSAGING) + tx_address + TranscieverInterface.FLUSH, encoding = "utf-8"))
 				
 		
 	

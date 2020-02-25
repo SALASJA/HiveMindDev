@@ -18,12 +18,61 @@ class MainView(View):
 		super().__init__(parent)
 		parent.title("main window")
 		parent.geometry("500x500")
-		self.construct_view()
+		self.widgets["connections"] = dict()
 	
 	def construct_view(self):
 		window = self.widgets["window"]
 		self.constructMenuBar(window)
+		
+		frame = tk.Frame(window)
+		self.widgets["connections_frame"] = frame
+		
+		label = tk.Label(frame, text = "No connections")
+		self.widgets["no_connections_label"] = label
+		
+		label.pack(expand = True, fill = "both")
+		frame.pack(expand = True, fill = "both")
+		
 		self.constructStatusBar(window)
+	
+	def add_connections(self, addresses):
+		label = self.widgets["no_connections_label"]
+		if label.winfo_viewable():
+			label.pack_forget()
+		
+		frame = self.widgets["connections_frame"]
+		
+		canvas = tk.Canvas(frame)
+		self.widgets["connections_canvas"] = canvas
+		
+		scroll_y = tk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+		self.widgets["connections_scroll"] = scroll_y
+		
+		widget_frame = tk.Frame(canvas)
+		self.widgets["widget_frame"] = widget_frame
+
+		connections = self.widgets["connections"]
+		
+		for address in addresses:
+			connections[address] = ConnectionView(address, widget_frame,self.widgets)
+			
+			
+		canvas.create_window(0, 0, anchor='nw', window=widget_frame)
+		canvas.update_idletasks()
+		canvas.configure(scrollregion=canvas.bbox('all'), 
+						 yscrollcommand=scroll_y.set)
+						 
+		
+		canvas.pack(fill='both', expand=True, side='left')
+		scroll_y.pack(fill='y', side='right')
+		
+		
+		
+		
+		
+		
+		
+	
 	
 	def constructMenuBar(self, window):
 		menu = tk.Menu(window)
@@ -39,6 +88,49 @@ class MainView(View):
 		statusbar = tk.Label(window, text="No MasterNode Connection", bd=1, relief=tk.SUNKEN, anchor=tk.W)
 		self.widgets["statusbar"] = statusbar
 		statusbar.pack(side=tk.BOTTOM, fill=tk.X)
+
+
+class ConnectionView:
+	def __init__(self, name, parent, parent_widgets):
+		self.name = name
+		self.parent_widgets = parent_widgets
+		self.widgets = dict()
+		self.widgets["parent"] = parent
+		self.constructLook(parent)
+	
+	def getWidget(self, widget_name):
+		return self.widgets[widget_name]
+	
+	def getParentWidget(self, widget_name):
+		return self.parent_widgets[widget_name]
+	
+	def constructLook(self,parent):
+		frame = tk.Frame(parent)
+		self.widgets["frame"] = frame
+		
+		label = tk.Label(frame, text = self.name)
+		self.widgets["label"] = label
+		
+		message_button = tk.Button(frame, text = "message")
+		self.widgets["message_button"] = message_button
+		
+		file_button = tk.Button(frame, text = "send file")
+		self.widgets["file_button"] = file_button
+		
+		data_button = tk.Button(frame, text = "collect data")
+		self.widgets["data_button"] = data_button
+		
+		settings_button = tk.Button(frame, text = "settings")
+		self.widgets["settings_button"] = settings_button
+		
+		label.pack(side = "left")
+		message_button.pack(side = "left")
+		file_button.pack(side = "left")
+		data_button.pack(side = "left")
+		settings_button.pack(side = "left")
+		frame.pack()
+		
+		
 		
 	
 
@@ -370,11 +462,22 @@ class SettingsView(View):
 class AddConnectionView(View):
 	def __init__(self,parent, main_view):
 		super().__init__(parent)
+		parent.title("Available Connections")
 		self.main_view = main_view
-		parent.geometry("320x200")
+		parent.geometry("320x250")
 		
 	def getParentViewWidget(self,name):
 		return self.main_view.getWidget(name)
+	
+	def getMainView(self):
+		return self.main_view
+	
+	def errorLook(self):
+		window = self.widgets["window"]
+		label = tk.Label(window, text = "No serial port selected")
+		self.widgets["error_label"] = label
+		label.pack(expand = True, fill = "both")
+		
 	
 	def waitingLook(self):
 		#if other widgets available deleted them
@@ -388,10 +491,11 @@ class AddConnectionView(View):
 		del self.widgets["waiting_label"]
 		
 		window = self.widgets["window"]
-		canvas = tk.Canvas(window)
+		frame = tk.Frame(window)
+		canvas = tk.Canvas(frame)
 		self.widgets["widget_canvas"] = canvas
 		
-		scroll_y = tk.Scrollbar(window, orient="vertical", command=canvas.yview)
+		scroll_y = tk.Scrollbar(frame, orient="vertical", command=canvas.yview)
 		self.widgets["connections_scroll"] = scroll_y
 		
 		widget_frame = tk.Frame(canvas)
@@ -410,10 +514,21 @@ class AddConnectionView(View):
 		canvas.update_idletasks()
 		canvas.configure(scrollregion=canvas.bbox('all'), 
 						 yscrollcommand=scroll_y.set)
+		
 						 
 		
 		canvas.pack(fill='both', expand=True, side='left')
-		scroll_y.pack(fill='y', side='right')	
+		scroll_y.pack(fill='y', side='right')
+		frame.pack(fill = 'x')
+		button = tk.Button(window, text = "Add Selected")
+		self.widgets["select_button"] = button
+		button.pack(fill = 'both', expand = True)
+		self.constructStatusBar(window)
+		
+	def constructStatusBar(self, window):
+		statusbar = tk.Label(window, text="Single Node Selection Mode", bd=1, relief=tk.SUNKEN, anchor=tk.W)
+		self.widgets["statusbar"] = statusbar
+		statusbar.pack(side=tk.BOTTOM, fill=tk.X)	
 	
 	
 		

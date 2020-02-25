@@ -7,6 +7,7 @@ class Controller:
 	def __init__(self, view, model):
 		self.view = view
 		self.model = model
+		self.view.construct_view()
 		self.set_events()
 	
 	def set_events(self):
@@ -66,28 +67,56 @@ class AddConnectionController:
 	def __init__(self,view, model):
 		self.view = view
 		self.model = model
-		self.view.waitingLook()
-		connections = self.model.findConnections()
-		self.view.connectionsLook(connections)
-		self.set_events()
+		statusbar = self.view.getParentViewWidget("statusbar")
+		if statusbar["text"] == "No MasterNode Connection":
+			self.view.errorLook()
+		else:
+			self.view.waitingLook()
+			window = self.view.getWidget("window")
+			window.update()
+			connections = self.model.findConnections()
+			self.view.connectionsLook(connections)
+			self.set_events()
+		
 	
 	def set_events(self):
 		labels = self.view.getWidget("connections")
 		for label in labels:
 			label.bind("<Button-1>", self.select_connection)
+		window = self.view.getWidget("widget_canvas")
+		window.bind("<Key>", self.multiple)
+		window.focus_set()
+		select_button = self.view.getWidget("select_button")
+		select_button["command"] = self.add_connections
+	
+	def multiple(self, event):
+		statusbar = self.view.getWidget("statusbar")
+		if "Single Node Selection Mode" == statusbar["text"]:
+			statusbar["text"] = "Multiple Node Selection Mode"
+		elif "Multiple Node Selection Mode" == statusbar["text"]:
+			statusbar["text"] = "Single Node Selection Mode"
 	
 	def select_connection(self, event):
 		labels = self.view.getWidget("connections")
-		for label in labels:
-			label["bg"] = "white"
+		statusbar = self.view.getWidget("statusbar")
+		if "Single Node Selection Mode" == statusbar["text"]:
+			for label in labels:
+				label["bg"] = "white"
 			
 		label = event.widget
 		label["bg"] = "light blue"
+	
+	def add_connections(self):
+		main_view = self.view.getMainView()
+		main_view.add_connections(["stuff"] * 10)
 		
 	def __del__(self):
 		labels = self.view.getWidget("connections")
 		for label in labels:
-			label.unbind("<Button-1>", self.select_connection)
+			label.unbind(self.select_connection)
+		
+		window = self.view.getWidget("window")
+		window.unbind(self.button_hold)
 		
 		
 		

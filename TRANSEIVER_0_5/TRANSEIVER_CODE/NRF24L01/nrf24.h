@@ -18,17 +18,17 @@ class Nrf24{
 		uint8_t receiving = FALSE;
 		uint8_t success_mode = TRUE; //not a property of the transceiver though I should just extend the class 
 		uint8_t payload_len = 32;
-		uint8_t nrf24_ADDR_LEN  = 5;
+		uint8_t nrf24_ADDR_LEN  = 3;
 		uint8_t NRF24_TRANSMISSON_OK  = 0;
 		uint8_t NRF24_MESSAGE_LOST  = 1;
 		uint8_t nrf24_CONFIG  = (1<<EN_CRC)|(0<<CRCO);
-		uint8_t TX_ADDR_VAL[5] = {0,'!','!','!','!'};
-		uint8_t RX_ADDR_P_VAL[6][5] = {{1,0,1,0,1}, //it has to be backwards
-                              		   {0,'!','!','!','!'},
-                               		   {'7','!','!','!','!'},
-                                       {'8','!','!','!','!'},
-                                       {'9','!','!','!','!'},
-                                       {'A','!','!','!','!'}};
+		uint8_t TX_ADDR_VAL[5] = {0,'!','!'};
+		uint8_t RX_ADDR_P_VAL[6][5] = {{'3','0','3'}, //it has to be backwards
+                              		   {0,'!','!'},
+                               		   {'7','!','!'},
+                                       {'8','!','!'},
+                                       {'9','!','!'},
+                                       {'A','!','!'}};
 		/* adjustment functions */
 		Nrf24();
 		

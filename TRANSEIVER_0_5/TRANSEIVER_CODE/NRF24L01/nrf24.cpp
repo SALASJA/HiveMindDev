@@ -7,10 +7,6 @@ Nrf24::Nrf24(){
 
 void Nrf24::init(){
 		//hmmmmmm
-		for(uint8_t i = 0; i < 5; i++){
-			RX_ADDR_P_VAL[0][i] = rand() % 255;
-		}
-		
 		standardSPIPinInit();
 		set_CE(LOW);
 		set_CSN(HIGH);
@@ -20,7 +16,7 @@ void Nrf24::standardConfig(){
 	payload_len = 32;
     
     configRegister(RF_CH,2);
-	configRegister(SETUP_AW, 0x03); //decides the address width its 5 bytes by default
+	configRegister(SETUP_AW, 0x01); //decides the address width its 5 bytes by default
 	//the other settings are defaulted
     // Set length of incoming payload 
     for(int i = 0; i < 6; i++){
@@ -117,7 +113,7 @@ uint8_t * Nrf24::get_RX_address(uint8_t pipe){
 
 void Nrf24::set_TX_address(uint8_t* adr){
 	/* RX_ADDR_P0 must be set to the sending addr for auto ack to work. */
-	writeRegister(RX_ADDR_P0,adr,nrf24_ADDR_LEN); 
+	writeRegister(RX_ADDR_P0,RX_ADDR_P_VAL[0],nrf24_ADDR_LEN); 
 	writeRegister(TX_ADDR,adr,nrf24_ADDR_LEN);
 }
 

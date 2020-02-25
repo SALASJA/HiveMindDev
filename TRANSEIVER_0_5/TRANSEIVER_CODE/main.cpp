@@ -42,8 +42,8 @@ ISR(USART_RX_vect) //its a lot like a GUI event if you have worked with those, m
 	receivedByte = (uint8_t) USART_Receive(); // Fetch the received byte value into the variable "ByteReceived"
 	data_buffer[data_buffer_index] = receivedByte;
 	data_buffer_index++;
-	if(data_buffer_index == 31 || receivedByte == '\r'){
-		data_buffer[data_buffer_index] = 0;
+	if(data_buffer_index == 29 || receivedByte == '\r'){
+		data_buffer[data_buffer_index - 1] = 0;
 		data_buffer_index = 0;
 		process_uart_input(transeiver, data_buffer);
 
