@@ -1,0 +1,47 @@
+CONFIG: b       1011     CRC is enabled, power is up, RX mode
+
+EN_AA: 3f       0011 1111   all pipes enabled for acknowledgement      
+
+EN_RXADDR:3f    0011 1111  all pipes address enabled
+
+SETUP_AW: 3     0011         address width 5 bytes
+
+SETUP_RETR: 4f  0100 1111    waiting and up to 15 retransmits so works         
+
+RF_CH: 2        0010      channel 2
+
+RF_SETUP: 26     0010 0110      configuring to 1 Mbps somehow
+
+STATUS: e       0000 1110 no data available in fifo
+
+OBSERVE_TX: 3   0011    
+
+RX_ADDR_P0: ?????     address
+
+RX_ADDR_P1: !!!!1
+
+RX_ADDR_P2: 32   
+
+RX_ADDR_P3: 33
+
+RX_ADDR_P4: 34
+
+RX_ADDR_P5: 35
+
+TX_ADDR: ?????     addresss
+
+RX_PW_P0: 0       
+
+RX_PW_P1: 20
+
+RX_PW_P2: 20
+
+RX_PW_P3: 20
+
+RX_PW_P4: 20
+
+RX_PW_P5: 20
+
+FIF0_STATUS: 11    0001 0001 empty seems to be properly set up
+
+DYNPD: 0
