@@ -2,7 +2,7 @@ import glob
 from transceiver import *
 
 def main():
-    ports = glob.glob("/dev/tty.wchusbserial*")
+    ports = glob.glob("/dev/tty.wchusbserial*") + glob.glob("/dev/tty.usbserial*") + glob.glob("COM5")
     if(len(ports) == 0):
     	print("no ports available, program ending")
     	exit()

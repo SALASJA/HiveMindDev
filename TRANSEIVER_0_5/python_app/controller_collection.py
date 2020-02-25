@@ -45,7 +45,7 @@ class SettingsController:
 	def __updatePortList(self):
 		serialPortOptionMenu = self.view.getWidget("serialPortOptionMenu")
 		port_choice = self.view.getWidget("port_choice")
-		serial_ports = glob.glob("/dev/tty.wchusbserial*")
+		serial_ports = glob.glob("/dev/tty.wchusbserial*") + glob.glob("/dev/tty.usbserial*") + glob.glob("COM5")
 		if len(serial_ports) == 0:
 			self.model.closeSerialPort()
 		menu = serialPortOptionMenu.children['menu']

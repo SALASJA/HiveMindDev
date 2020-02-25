@@ -432,7 +432,7 @@ class SettingsView(View):
 		
 	
 	def __constructSerialPortOptionMenu(self, serial_port_select_frame):
-		serial_ports = glob.glob("/dev/tty.wchusbserial*")
+		serial_ports = glob.glob("/dev/tty.wchusbserial*") + glob.glob("/dev/tty.usbserial*") + glob.glob("COM5")
 		port_choice = tk.StringVar()
 		serial_ports.insert(0,"None selected")
 		self.widgets["port_choice"] = port_choice
