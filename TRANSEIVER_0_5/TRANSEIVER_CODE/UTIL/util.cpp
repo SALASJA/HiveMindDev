@@ -106,6 +106,10 @@ void process_uart_input(Nrf24 &transeiver, uint8_t * data_buffer){
 	switch(data_buffer[0]){
 		case 0: {
 				  copy(transeiver.RX_ADDR_P_VAL[0], data_buffer + 29);
+				  //for(int i = 29; i < 32; i++){
+				  //	USART_Transmit(data_buffer[i]);
+				  //}
+				  //USART_Transmit('\n');
 				  transeiver.send(data_buffer + 1); //make a macro to shift
 				  while(transeiver.isSending())
 					;
@@ -151,9 +155,9 @@ void process_uart_input(Nrf24 &transeiver, uint8_t * data_buffer){
 void process_recieved(Nrf24 &transeiver, uint8_t * receive_buffer){
 	static uint8_t success[32] = "<<<success>>>";
 	static uint8_t address[32] = "3";
-	static uint8_t sent_address = FALSE;
-	static uint8_t receive_address = FALSE;
-	static uint8_t on = FALSE;
+	uint8_t sent_address = FALSE;
+	uint8_t receive_address = FALSE;
+	uint8_t on = FALSE;
 	switch(receive_buffer[0]){
 		case '0': PORTD ^= 1 << 5;
 				  break;
@@ -178,17 +182,19 @@ void process_recieved(Nrf24 &transeiver, uint8_t * receive_buffer){
 	if(!sent_address && !receive_address){
 		if(transeiver.isSuccessMode()){
 			if(is_success(receive_buffer, success)){
+				//printf("caught\n");
 				print_success(success);
 			}else{
 				print_receive(receive_buffer);
 				transeiver.set_TX_address(receive_buffer + 28);
 				copy(receive_buffer + 28, success + 13); //16
+				//print_receive(success);
 				transeiver.send(success);
 				transeiver.set_TX_address(transeiver.TX_ADDR_VAL);
 			}
 		}
 		else{
-			//printf("RECEIVED:%s\n",receive_buffer);
+			//printf("success off\n");
 			print_receive(receive_buffer);
 		}
 	}

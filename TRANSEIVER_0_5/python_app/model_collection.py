@@ -1,13 +1,22 @@
 import serial
 import multiprocessing
 import time
+import util 
+
 class Network:
 	def __init__(self):
 		self.transceiver = TransceiverInterface()
-		self.connections = []
+		self.connections = dict()
 		self.settings_open = False
 		self.add_connections_open = False 
 		self.connection = False
+		self.message_number = 0
+		self.message_complete = False
+		self.message_buffer = []
+		self.sent_last_line = False
+		self.sent_first_line = True
+		self.chunk_length = 28
+		self.message_last_sent = "";
 		
 	def openSerialPort(self, serial_port_name):
 		if not self.connection:
@@ -16,15 +25,69 @@ class Network:
 	
 	def closeSerialPort(self):
 		pass
+	
+	def clearBuffer(self):
+		self.message_buffer = []
+	
+	def incrementMessageNumber(self):
+		self.message_number += 1
+	
+	def setSendingAddress(self, address):
+		print("setting sending address")
+		#self.transceiver.set_TX_address(address)
+	
+	def getMessageNumber(self):
+		return self.message_number
+	
+	def load(self, message):
+		self.message_buffer = util.messageChunks(message, self.chunk_length)
+		self.message_buffer.append(chr(0)) #marks end of buffer
+	
+	def getMessageLastSent(self):
+		return self.message_last_sent
 		
-	def sendPersonalMessage(self,message):
-		self.transceiver.send(ord(Transciever.MESSAGING) + message)
+	def send(self):
+		message = self.message_buffer.pop(0)
+		self.message_last_sent = message
+		
+		if message == chr(0):
+			self.sent_last_line = True
+			
+		return True #self.transceiver.sendMediaMessage(message)
+	
+	def sentFirstLine(self):
+		return self.sent_first_line
+	
+	def sentLastLine(self):
+		return self.sent_last_line
+	
+	def setSentFirstLine(self, value):
+		self.sent_first_line = value
+	
+	def setSentLastLine(self,value):
+		self.sent_last_line = value
+	
+	def empty(self):
+		return len(self.message_buffer) == 0
+	
+	def isMessageComplete(self):
+		return self.message_complete
+	
+	def setMessageComplete(self, value):
+		self.message_complete = value
 	
 	def receivePersonalMessage(self):
 		return self.transceiver.receivePersonalMessage()
 	
-	def addConnection(self):
-		pass
+	def addConnection(self, connection):
+		self.connections[connection.getViewName()] = connection
+	
+	def removeConnection(self, connection_name):
+		if connection_name in self.connections:
+			del self.connections[connection_name]
+	
+	def resetMessageNumber(self):
+		self.message_number = 0
 	
 	def isSettingsOpen(self):
 		return self.settings_open
@@ -101,6 +164,7 @@ class TransceiverInterface:
 				self.send_queue.put(bytes(chr(TransceiverInterface.GET_TX_ADDRESS) + TransceiverInterface.FLUSH, encoding = "utf-8"))
 				start = time.monotonic()
 		self.tx_address = self.state_queue.get()
+		print("setting address success: ", self.tx_address)
 		while not self.state_queue.empty():
 			self.state_queue.get()
 		
@@ -108,6 +172,7 @@ class TransceiverInterface:
 			self.send_queue.get()
 	
 	def set_TX_address(self, address):
+		print("setting address: ", address)
 		self.send_queue.put(bytes(chr(TransceiverInterface.SET_TX_ADDRESS) + address + TransceiverInterface.FLUSH, encoding = "utf-8"))
 		self.get_TX_address_from_node()
 		
@@ -138,10 +203,12 @@ class TransceiverInterface:
 	def communication(obj, SERIAL_PORT_NAME, BAUD_RATE,send_queue, receive_queue, state_queue, address_queue, success_queue):         #gets the receiving messages in a parallel process # this gets put under cases
 		ser = None
 		try:
-			ser = serial.Serial(SERIAL_PORT_NAME, BAUD_RATE, timeout = 0.1)
+			ser = serial.Serial(SERIAL_PORT_NAME, BAUD_RATE, timeout = 0.10)
 			while True:                   #maybe to improve reliability put them in seperate queues
 				reading = ser.readline() #brrrreeeeaaaks here
 				reading = str(reading)
+				if reading != "b''":
+					print("com:" + reading)
 				original = reading
 				if "ADDRESS:" in reading:
 					reading = obj.formatReceivedMessage(reading)    #should use obj instead since self makes it misleading
@@ -159,6 +226,7 @@ class TransceiverInterface:
 				
 				if(not send_queue.empty()):
 					hmm = send_queue.get()
+					print(hmm)
 					ser.write(hmm)
 					
 				if "b''" == original:
@@ -182,14 +250,14 @@ class TransceiverInterface:
 		return message
 			
 	def receivePersonalMessage(self):
-		messages = None
+		message = None
 		if self.receive_queue != None and not self.receive_queue.empty():
 			message = self.receive_queue.get()
 		return message
 	
 	def send(self, message):
 		if  ord(message[0]) == TransceiverInterface.MESSAGING:
-			self.sendMediaMessage(message)
+			self.sendMediaMessage(message[1:])
 		elif ord(message[0]) == TransceiverInterface.SET_TX_ADDRESS:
 			self.set_TX_address(message[1:4])
 		elif ord(message[0]) == TransceiverInterface.SET_RX_ADDRESS:
@@ -205,25 +273,40 @@ class TransceiverInterface:
 			
 		
 	def sendMediaMessage(self, message): #this has a protocol to retransmit if fails through, yap I know its not using autoack
-		self.send_queue.put(bytes(message + TransceiverInterface.FLUSH,encoding = "utf-8"))
+		print(message)
+		self.send_queue.put(bytes(chr(TransceiverInterface.MESSAGING) + message + TransceiverInterface.FLUSH,encoding = "utf-8"))
 		start = time.monotonic()
 		interval = start
 		success = False
-		while time.monotonic() < start + 30:
-			if time.monotonic() > interval + 3:
-				self.send_queue.put(bytes(message + TransceiverInterface.FLUSH,encoding = "utf-8"))
+		
+		while not self.success_queue.empty(): # this success queue might need to be fixed longer
+			self.success_queue.get()
+			
+		while time.monotonic() < start + 15:
+			if time.monotonic() > interval + 1:
+				print("sent again")
+				self.send_queue.put(bytes(chr(TransceiverInterface.MESSAGING) + message + TransceiverInterface.FLUSH,encoding = "utf-8"))
 				interval = time.monotonic()
 				
 			if not self.success_queue.empty():
 				success = True
-				self.success_queue.get()
-				break
+				self.success_queue.get()   #sometimes wrong here
+				break   
+				
+		while not self.send_queue.empty():
+			self.send_queue.get()
+			#print("clearing")
+		
+		while not self.success_queue.empty(): # this success queue might need to be fixed longer
+			self.success_queue.get()
+			#print("clearing")
 		
 		if success:
 			print("message sent!")
 		else:
 			print("message fail")
 		return success
+		
 	
 	def finding(self):
 		self.send_queue.put(bytes(chr(TransceiverInterface.SET_TX_ADDRESS) + TransceiverInterface.FINDING_ADDRESS + TransceiverInterface.FLUSH, encoding = "utf-8"))
@@ -248,12 +331,13 @@ class TransceiverInterface:
 			
 		while not self.address_queue.empty():
 			self.address_queue.get()
-			print("clearing")
+			#print("clearing")
 		
 		while not self.send_queue.empty():
 			self.send_queue.get()
-			print("clearing")
-			
+			#print("clearing")
+		
+		
 		self.send_queue.put(bytes(chr(TransceiverInterface.SET_TX_ADDRESS) + self.tx_address + TransceiverInterface.FLUSH, encoding = "utf-8"))
 		#cycle through address that return a success and there is our list
 		

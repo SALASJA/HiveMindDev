@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 import glob 
+from PIL import Image, ImageTk
+
 class View:
 	def __init__(self, parent):
 		self.widgets = dict()
@@ -17,8 +19,11 @@ class MainView(View):
 	def __init__(self, parent):
 		super().__init__(parent)
 		parent.title("main window")
-		parent.geometry("500x500")
+		parent.geometry("360x500")
+		parent.resizable(0,0)
 		self.widgets["connections"] = dict()
+		self.connection_frame_created = False
+		self.connection_frame_hiding = False
 	
 	def construct_view(self):
 		window = self.widgets["window"]
@@ -35,11 +40,8 @@ class MainView(View):
 		
 		self.constructStatusBar(window)
 	
-	def add_connections(self, addresses):
-		label = self.widgets["no_connections_label"]
-		if label.winfo_viewable():
-			label.pack_forget()
-		
+	def construct_connection_frame(self):
+			
 		frame = self.widgets["connections_frame"]
 		
 		canvas = tk.Canvas(frame)
@@ -50,21 +52,74 @@ class MainView(View):
 		
 		widget_frame = tk.Frame(canvas)
 		self.widgets["widget_frame"] = widget_frame
-
-		connections = self.widgets["connections"]
 		
-		for address in addresses:
-			connections[address] = ConnectionView(address, widget_frame,self.widgets)
-			
-			
 		canvas.create_window(0, 0, anchor='nw', window=widget_frame)
 		canvas.update_idletasks()
 		canvas.configure(scrollregion=canvas.bbox('all'), 
 						 yscrollcommand=scroll_y.set)
 						 
-		
+		#widget_frame.pack(fill='both', expand=True)
 		canvas.pack(fill='both', expand=True, side='left')
 		scroll_y.pack(fill='y', side='right')
+	
+	def add_connections(self, addresses):           #this needs to be made
+		if len(addresses) == 0:
+			return 
+			
+		label = self.widgets["no_connections_label"]
+		if label.winfo_viewable():
+			label.pack_forget()
+			
+		if not self.connection_frame_created:
+			self.construct_connection_frame()
+			self.connection_frame_created= True
+		
+		if self.connection_frame_hiding:
+			canvas = self.widgets["connections_canvas"]
+			scroll_y = self.widgets["connections_scroll"]
+			canvas.pack(fill='both', expand=True, side='left')
+			scroll_y.pack(fill='y', side='right')
+			
+		
+		
+		
+		connections = self.widgets["connections"]
+		widget_frame = self.widgets["widget_frame"]
+		filtered_addresses = []
+		for address in addresses:
+			if address not in connections:
+				filtered_addresses.append(address)
+				
+		for address in filtered_addresses:
+			connections[address] = ConnectionView(address, widget_frame,self)
+		
+		canvas = self.widgets["connections_canvas"]
+		scroll_y = self.widgets["connections_scroll"]
+		canvas.update_idletasks()
+		canvas.configure(scrollregion=canvas.bbox('all'), yscrollcommand=scroll_y.set)
+		
+			
+			
+		
+	
+	def remove_connection(self, address): #need to fix this
+		connections = self.widgets["connections"]
+		connection = connections[address]
+		connection.destroy()
+		del connections[address]
+		canvas = self.widgets["connections_canvas"]
+		scroll_y = self.widgets["connections_scroll"]
+		canvas.update_idletasks()
+		canvas.configure(scrollregion=canvas.bbox('all'), yscrollcommand=scroll_y.set)
+		
+		if len(connections) == 0:
+			canvas.pack_forget()
+			scroll_y.pack_forget()
+			self.connection_frame_hiding = True
+			label = self.widgets["no_connections_label"]
+			label.pack(expand = True, fill = "both")
+		
+		
 		
 		
 		
@@ -91,44 +146,97 @@ class MainView(View):
 
 
 class ConnectionView:
-	def __init__(self, name, parent, parent_widgets):
+	def __init__(self, name, parent, parent_view):
 		self.name = name
-		self.parent_widgets = parent_widgets
+		self.parent_view = parent_view
 		self.widgets = dict()
 		self.widgets["parent"] = parent
 		self.constructLook(parent)
+		
 	
 	def getWidget(self, widget_name):
 		return self.widgets[widget_name]
 	
 	def getParentWidget(self, widget_name):
-		return self.parent_widgets[widget_name]
+		return self.parent_view.getWidget(widget_name)
+	
+	def getParentView(self):
+		return self.parent_view
+	
+	def getName(self):
+		return self.name
 	
 	def constructLook(self,parent):
-		frame = tk.Frame(parent)
-		self.widgets["frame"] = frame
+		window = self.getParentWidget("window")
+		outerframe = tk.Frame(parent, bd = 2 , relief = tk.GROOVE, highlightbackground = "black")
+		self.widgets["outerframe"] = outerframe
 		
-		label = tk.Label(frame, text = self.name)
+		self.constructExitFrame(outerframe)
+		self.constructPictureFrame(outerframe)
+		self.constructButtonFrame(outerframe)
+		outerframe.pack()
+	
+	def constructExitFrame(self, outerframe):
+		exitframe = tk.Frame(outerframe)
+		self.widgets["exitframe"] = exitframe
+		
+		label = tk.Label(exitframe, text = self.name)
 		self.widgets["label"] = label
 		
-		message_button = tk.Button(frame, text = "message")
+		removebutton = tk.Button(exitframe, text = "x")
+		self.widgets["removebutton"] = removebutton
+		label.pack(side = "left")
+		removebutton.pack(anchor = tk.E)
+		exitframe.pack(fill = tk.X, expand = True)
+	
+	def constructPictureFrame(self,outerframe):
+		pictureframe = tk.Frame(outerframe)
+		self.widgets["pictureframe"] = tk.Frame(pictureframe)
+		load = None 
+		try:
+			load = Image.open("python_app/image.gif")
+		except:
+			load = Image.open("image.gif")
+		render = ImageTk.PhotoImage(load)
+		img = tk.Label(pictureframe, image = render)
+		img.image = render
+		self.widgets["img"] = img
+		self.widgets["image"] = render
+		img.pack(anchor = tk.NW)
+		pictureframe.pack()
+	
+	def constructButtonFrame(self, outerframe):
+		buttonframe = tk.Frame(outerframe)
+		self.widgets["buttonframe"] = buttonframe
+		
+		message_button = tk.Button(buttonframe, text = "message")
 		self.widgets["message_button"] = message_button
 		
-		file_button = tk.Button(frame, text = "send file")
+		file_button = tk.Button(buttonframe, text = "send file")
 		self.widgets["file_button"] = file_button
 		
-		data_button = tk.Button(frame, text = "collect data")
+		data_button = tk.Button(buttonframe, text = "collect data")
 		self.widgets["data_button"] = data_button
 		
-		settings_button = tk.Button(frame, text = "settings")
+		settings_button = tk.Button(buttonframe, text = "settings")
 		self.widgets["settings_button"] = settings_button
-		
-		label.pack(side = "left")
 		message_button.pack(side = "left")
 		file_button.pack(side = "left")
 		data_button.pack(side = "left")
 		settings_button.pack(side = "left")
-		frame.pack()
+		buttonframe.pack()
+	
+	
+	def destroy(self):
+		for widget in self.widgets:
+			try:
+				if widget != "parent":
+					self.widgets[widget].pack_forget()
+					self.widgets[widget].destroy()
+					del widget[widget]
+			except Exception as e:
+				print("Exception:",e)
+				pass
 		
 		
 		
@@ -151,263 +259,12 @@ class SettingsView(View):
 		tab_parent = ttk.Notebook(window)
 		self.widgets["notebook"] = tab_parent
 		
-		self.construct_NRF24L01_settings_tab(tab_parent)
 		self.construct_SerialPort_Connection_settings_tab(tab_parent)
 		
 		tab_parent.pack(expand=1, fill='both')
-		self.constructApplyButton(window)
 		
 		
 		
-	def construct_NRF24L01_settings_tab(self, tab_parent):
-		tab1 = ttk.Frame(tab_parent)
-		self.widgets["NRF24L01_settings_tab"] = tab1
-		tab_parent.add(tab1, text="NRF24L01")
-		
-		canvas = tk.Canvas(tab1)
-		self.widgets["NRF24L01_settings_canvas"] = canvas
-		
-		scroll_y = tk.Scrollbar(tab1, orient="vertical", command=canvas.yview)
-		self.widgets["NRF24L01_settings_scroll"] = scroll_y
-		
-		widget_frame = tk.Frame(canvas)
-		self.widgets["NRF24L01_settings_widget_frame"] = widget_frame
-
-		self.construct_CONFIG_Register_Settings(widget_frame)
-		self.construct_EN_AA_Register_Settings(widget_frame)
-		self.construct_EN_RXADDR_Register_Settings(widget_frame)
-		self.construct_SETUP_AW_Register_Settings(widget_frame)
-		self.construct_SETUP_RETR_Register_Settings(widget_frame)
-		self.construct_RF_CH_Register_Settings(widget_frame)
-		self.construct_RF_SETUP_Register_Settings(widget_frame)
-		self.construct_OBSERVE_TX_Register_Settings(widget_frame)
-		self.construct_RX_PW_PN_Registers_Settings(widget_frame)
-		self.construct_FIFO_STATUS_Register_Settings(widget_frame)
-		self.construct_DYNPD_Register_Settings(widget_frame)
-			
-			
-		canvas.create_window(0, 0, anchor='nw', window=widget_frame)
-		canvas.update_idletasks()
-		canvas.configure(scrollregion=canvas.bbox('all'), 
-						 yscrollcommand=scroll_y.set)
-						 
-		
-		canvas.pack(fill='both', expand=True, side='left')
-		scroll_y.pack(fill='y', side='right')
-		
-	def construct_CONFIG_Register_Settings(self, widget_frame):
-		config_frame = tk.Frame(widget_frame)
-		self.widgets["CONFIG_frame"] = config_frame
-		
-		config_label = tk.Label(widget_frame, text = "CONFIG Register")
-		self.widgets["CONFIG_label"] = config_label
-		options = ["mask receiver interrupt",
-		           "mask transmiter interrupt",
-		           "mask max retransmits interrupt",
-		           "Enable Cyclic Redundancy Check",
-		           "CRC encoding scheme(unchecked 1 bit/checked 2 bits)"]
-		
-		config_label.pack()
-		self.constructCheckButtonField(config_frame,options, 5, "CONFIG_bits", "CONFIG_checkbuttons")
-		config_frame.pack(anchor = tk.W)
-		
-		
-		
-	def construct_EN_AA_Register_Settings(self,widget_frame):
-		config_frame = tk.Frame(widget_frame)
-		self.widgets["EN_AA_frame"] = config_frame
-		
-		config_label = tk.Label(widget_frame, text = "EN_AA Register")
-		self.widgets["EN_AA_label"] = config_label
-		options = ["Enable Auto Ack on data pipe 5",
-				   "Enable Auto Ack on data pipe 4",
-				   "Enable Auto Ack on data pipe 3",
-				   "Enable Auto Ack on data pipe 2",
-				   "Enable Auto Ack on data pipe 1",
-				   "Enable Auto Ack on data pipe 0"]
-		config_label.pack()
-		self.constructCheckButtonField(config_frame,options, 6, "EN_AA_bits", "EN_AA_checkbuttons")
-		config_frame.pack(anchor = tk.W)
-		
-	def construct_EN_RXADDR_Register_Settings(self,widget_frame):
-		config_frame = tk.Frame(widget_frame)
-		self.widgets["EN_RXADDR_frame"] = config_frame
-		
-		config_label = tk.Label(widget_frame, text = "EN_RXADDR Register")
-		self.widgets["EN_RXADDR_label"] = config_label
-		options = ["Enable data pipe 5",
-				   "Enable data pipe 4",
-				   "Enable data pipe 3",
-				   "Enable data pipe 2",
-				   "Enable data pipe 1",
-				   "Enable data pipe 0"]
-		config_label.pack()
-		self.constructCheckButtonField(config_frame,options, 6, "EN_RXADDR_bits", "EN_RXADDR_checkbuttons")
-		config_frame.pack(anchor = tk.W)
-		
-	def construct_SETUP_AW_Register_Settings(self,widget_frame):
-		config_frame = tk.Frame(widget_frame)
-		self.widgets["SETUP_AW_frame"] = config_frame
-		
-		config_label = tk.Label(widget_frame, text = "SETUP_AW Register")
-		self.widgets["SETUP_AW_label"] = config_label
-		options = ["3 byte address width",     #these should be radio buttons
-				   "4 byte address width",
-				   "5 byte address width"]
-		config_label.pack()
-		var = tk.IntVar()
-		self.widgets["SETUP_AW_radio_var"] = var
-		radiobuttons = []
-		i = 0
-		for option in options:
-			radiobuttons.append(tk.Radiobutton(config_frame, text = option, variable = var, value = i))
-			i = i + 1
-		
-		self.widgets["SETUP_AW_radiobuttons"] = radiobuttons
-			
-		for button in radiobuttons:
-			button.pack(anchor = tk.W)
-		config_frame.pack(anchor = tk.W)
-		
-	def construct_SETUP_RETR_Register_Settings(self,widget_frame):
-		config_frame = tk.Frame(widget_frame)
-		self.widgets["SETUP_RETR_frame"] = config_frame
-		
-		config_label = tk.Label(widget_frame, text = "SETUP_RETR Register")
-		self.widgets["SETUP_RETR_label"] = config_label
-		config_label.pack()
-		
-		label = tk.Label(config_frame, text = "Auto retransmit delay options")
-		label.pack()
-		options = []
-		for i in range(16):
-			options.append("Auto retransmit delay " +  str((i + 1) * 250) + " microseconds")
-			
-		var = tk.IntVar()
-		self.widgets["SETUP_AW_radio_var"] = var
-		radiobuttons = []
-		i = 0
-		for option in options:
-			radiobuttons.append(tk.Radiobutton(config_frame, text = option, variable = var, value = i))
-			i = i + 1
-		
-		self.widgets["SETUP_AW_radiobuttons"] = radiobuttons
-			
-		for button in radiobuttons:
-			button.pack(anchor = tk.W)
-		
-		label = tk.Label(config_frame, text = "Auto retransmit count options")
-		label.pack()
-		options = ["Retransmit disabled"]
-		for i in range(15):
-			options.append("Up to " + str((i + 1)) + " retransmit on fail of Auto Ack ")
-			
-		var = tk.IntVar()
-		self.widgets["SETUP_AW_radio_var"] = var
-		radiobuttons = []
-		i = 0
-		for option in options:
-			radiobuttons.append(tk.Radiobutton(config_frame, text = option, variable = var, value = i))
-			i = i + 1
-		
-		self.widgets["SETUP_AW_radiobuttons"] = radiobuttons
-			
-		for button in radiobuttons:
-			button.pack(anchor = tk.W)
-		config_frame.pack(anchor = tk.W)
-		
-	def construct_RF_CH_Register_Settings(self,widget_frame):
-		config_frame = tk.Frame(widget_frame)
-		self.widgets["RF_CH_frame"] = config_frame
-		
-		config_label = tk.Label(widget_frame, text = "RF Channel Register")
-		self.widgets["RF_CH_label"] = config_label
-		
-		var = tk.StringVar()
-		config_label.pack()
-		
-		frame = tk.Frame(config_frame)
-		entry = tk.Entry(frame, textvariable = var)
-		label = tk.Label(frame, text = "configure a Channel from 0 - 128")
-		entry.pack(side = "left")
-		label.pack(side = "left")
-		frame.pack(anchor = tk.W)
-		config_frame.pack(anchor = tk.W)
-		
-	def construct_RF_SETUP_Register_Settings(self,widget_frame):
-		config_frame = tk.Frame(widget_frame)
-		self.widgets["EN_AA_frame"] = config_frame
-		
-		config_label = tk.Label(widget_frame, text = "EN_AA Register")
-		self.widgets["EN_AA_label"] = config_label
-			
-		config_label.pack()
-		self.constructCheckButtonField(config_frame,["hmmm"] * 8, 8, "EN_AA_bits", "EN_AA_checkbuttons")
-		config_frame.pack()
-		
-		
-	def construct_OBSERVE_TX_Register_Settings(self,widget_frame):
-		config_frame = tk.Frame(widget_frame)
-		self.widgets["EN_AA_frame"] = config_frame
-		
-		config_label = tk.Label(widget_frame, text = "EN_AA Register")
-		self.widgets["EN_AA_label"] = config_label
-			
-		config_label.pack()
-		self.constructCheckButtonField(config_frame,["hmmm"] * 8, 8, "EN_AA_bits", "EN_AA_checkbuttons")
-		config_frame.pack()
-		
-	def construct_RX_PW_PN_Registers_Settings(self,widget_frame):
-		config_frame = tk.Frame(widget_frame)
-		self.widgets["EN_AA_frame"] = config_frame
-		
-		config_label = tk.Label(widget_frame, text = "EN_AA Register")
-		self.widgets["EN_AA_label"] = config_label
-			
-		config_label.pack()
-		self.constructCheckButtonField(config_frame,["hmmm"] * 8, 8, "EN_AA_bits", "EN_AA_checkbuttons")
-		config_frame.pack()
-		
-	def construct_FIFO_STATUS_Register_Settings(self,widget_frame):
-		config_frame = tk.Frame(widget_frame)
-		self.widgets["EN_AA_frame"] = config_frame
-		
-		config_label = tk.Label(widget_frame, text = "EN_AA Register")
-		self.widgets["EN_AA_label"] = config_label
-			
-		config_label.pack()
-		self.constructCheckButtonField(config_frame,["hmmm"] * 8, 8, "EN_AA_bits", "EN_AA_checkbuttons")
-		config_frame.pack()
-		
-	def construct_DYNPD_Register_Settings(self,widget_frame):
-		config_frame = tk.Frame(widget_frame)
-		self.widgets["EN_AA_frame"] = config_frame
-		
-		config_label = tk.Label(widget_frame, text = "EN_AA Register")
-		self.widgets["EN_AA_label"] = config_label
-			
-		config_label.pack()
-		self.constructCheckButtonField(config_frame,["hmmm"] * 8, 8, "EN_AA_bits", "EN_AA_checkbuttons")
-		config_frame.pack()
-	
-	def constructApplyButton(self, settings_parent):
-		button = tk.Button(settings_parent, text = "Apply")
-		button.pack()
-	
-	def constructCheckButtonField(self, parent, labels, amount, bit_vars_groupname, checkbuttons_groupname):
-		bit_vars = []
-		checkbuttons = []
-		for i in range(amount):
-			v = tk.IntVar()
-			bit_vars.append(v)
-			checkbutton = tk.Checkbutton(parent, text = labels[i], variable = v)
-			checkbuttons.append(checkbutton)
-		
-		self.widgets[bit_vars_groupname] = bit_vars
-		self.widgets[checkbuttons_groupname] = checkbuttons
-		
-		for button in checkbuttons:
-			button.pack(anchor = tk.W)
 	
 	def construct_SerialPort_Connection_settings_tab(self, tab_parent):
 		tab = ttk.Frame(tab_parent)
@@ -529,6 +386,81 @@ class AddConnectionView(View):
 		statusbar = tk.Label(window, text="Single Node Selection Mode", bd=1, relief=tk.SUNKEN, anchor=tk.W)
 		self.widgets["statusbar"] = statusbar
 		statusbar.pack(side=tk.BOTTOM, fill=tk.X)	
+
+
+
+class MessageView:
+	def __init__(self, window, name, main_view):
+		self.main_view = main_view
+		self.name = name
+		self.widgets = {}
+		self.widgets["window"] = window
+		window.resizable(0,0)
+		window.title(name)
+		self.construct_look()
+	
+	def addWidget(self, name, widget):
+		self.widgets[name] = widget
+	
+	def getParentWidget(self, widget):
+		return self.main_view.getWidget(widget)
+	
+	def getWidget(self, name):
+		return self.widgets[name]
+	
+	def getName(self):
+		return self.name
+	
+	def construct_look(self):
+		window = self.widgets["window"]
+		self.__constructMessageFrame(window)
+	
+	def __constructMessageFrame(self, window):
+		messaging_area_frame = tk.Frame(window)
+		self.widgets["messaging_area_frame"] = messaging_area_frame
+		self.__constructTextAreaFrame(messaging_area_frame)
+		self.__constructTextInputFrame(messaging_area_frame)
+		messaging_area_frame.pack()
+		
+	def __constructTextAreaFrame(self, messaging_area_frame):
+		text_frame = tk.Frame(messaging_area_frame)
+		self.widgets["text_frame"] = text_frame
+		
+		text_widget = tk.Text(text_frame)
+		self.widgets["text_widget"] = text_widget
+		text_widget.config(state=tk.DISABLED)
+		
+		scroll_bar = ttk.Scrollbar(text_frame, command = text_widget.yview)
+		self.widgets["scroll_bar"] = scroll_bar
+		text_widget["yscrollcommand"] = scroll_bar.set 
+		
+		text_widget.pack(side = tk.LEFT)
+		scroll_bar.pack(side = tk.RIGHT, fill = tk.Y)
+		
+		text_frame.pack()
+	
+	def __constructTextInputFrame(self,messaging_area_frame):
+		input_frame = tk.Frame(messaging_area_frame)
+		self.widgets["input_frame"] = input_frame
+		self.__constructEntry(input_frame)
+		self.__constructSendButton(input_frame)
+		self.__constructClearButton(input_frame)
+		input_frame.pack()
+	
+	def __constructEntry(self, input_frame):
+		entry = tk.Text(input_frame, height = 3, width = 65)
+		self.widgets["entry"] = entry
+		entry.pack(side = tk.LEFT)
+		
+	def __constructSendButton(self, input_frame):
+		send_button = tk.Button(input_frame, text = "send")
+		self.widgets["send_button"] = send_button
+		send_button.pack(side = tk.LEFT)
+	
+	def __constructClearButton(self, input_frame):
+		clear_button = tk.Button(input_frame, text = "clear")
+		self.widgets["clear_button"] = clear_button
+		clear_button.pack(side = tk.LEFT)
 	
 	
 		
