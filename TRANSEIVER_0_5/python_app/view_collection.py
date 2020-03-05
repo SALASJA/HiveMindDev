@@ -3,32 +3,40 @@ from tkinter import ttk
 import glob 
 from PIL import Image, ImageTk
 
-class View:
+class MainView:
 	def __init__(self, parent):
+		parent.title("main window")
+		parent.geometry("360x500")
+		parent.resizable(0,0)
 		self.widgets = dict()
 		self.widgets["window"] = parent
-		
+		self.widgets["connections"] = dict()
+		self.connection_frame_created = False
+		self.connection_frame_hiding = False
+	
 	def getWidget(self, widget_name):
 		return self.widgets[widget_name]
 	
 	def addWidget(self, name, widget):
 		self.widgets[name] = widget
 	
-	
-class MainView(View):
-	def __init__(self, parent):
-		super().__init__(parent)
-		parent.title("main window")
-		parent.geometry("360x500")
-		parent.resizable(0,0)
-		self.widgets["connections"] = dict()
-		self.connection_frame_created = False
-		self.connection_frame_hiding = False
-	
 	def construct_view(self):
 		window = self.widgets["window"]
 		self.constructMenuBar(window)
-		
+		self.constructNoConnectionLabel(window)
+		self.constructStatusBar(window)
+	
+	def constructMenuBar(self, window):
+		menu = tk.Menu(window)
+		self.widgets["Toolbar_menu"] = menu
+		window.config(menu = menu)
+		submenu = tk.Menu(menu)
+		self.widgets["Application_dropmenu"] = submenu
+		menu.add_cascade(label = "Application", menu = submenu)
+		submenu.add_command(label = "Settings")
+		submenu.add_command(label = "Add Connection")
+	
+	def constructNoConnectionLabel(self,window):
 		frame = tk.Frame(window)
 		self.widgets["connections_frame"] = frame
 		
@@ -37,8 +45,11 @@ class MainView(View):
 		
 		label.pack(expand = True, fill = "both")
 		frame.pack(expand = True, fill = "both")
-		
-		self.constructStatusBar(window)
+	
+	def constructStatusBar(self, window):
+		statusbar = tk.Label(window, text="No MasterNode Connection", bd=1, relief=tk.SUNKEN, anchor=tk.W)
+		self.widgets["statusbar"] = statusbar
+		statusbar.pack(side=tk.BOTTOM, fill=tk.X)
 	
 	def construct_connection_frame(self):
 			
@@ -105,7 +116,7 @@ class MainView(View):
 	def remove_connection(self, address): #need to fix this
 		connections = self.widgets["connections"]
 		connection = connections[address]
-		connection.destroy()
+		#connection.destroy()
 		del connections[address]
 		canvas = self.widgets["connections_canvas"]
 		scroll_y = self.widgets["connections_scroll"]
@@ -129,20 +140,7 @@ class MainView(View):
 		
 	
 	
-	def constructMenuBar(self, window):
-		menu = tk.Menu(window)
-		self.widgets["Toolbar_menu"] = menu
-		window.config(menu = menu)
-		submenu = tk.Menu(menu)
-		self.widgets["Application_dropmenu"] = submenu
-		menu.add_cascade(label = "Application", menu = submenu)
-		submenu.add_command(label = "Settings")
-		submenu.add_command(label = "Add Connection")
 	
-	def constructStatusBar(self, window):
-		statusbar = tk.Label(window, text="No MasterNode Connection", bd=1, relief=tk.SUNKEN, anchor=tk.W)
-		self.widgets["statusbar"] = statusbar
-		statusbar.pack(side=tk.BOTTOM, fill=tk.X)
 
 
 class ConnectionView:
@@ -156,6 +154,9 @@ class ConnectionView:
 	
 	def getWidget(self, widget_name):
 		return self.widgets[widget_name]
+	
+	def addWidget(self, name, widget):
+		self.widgets[name] = widget
 	
 	def getParentWidget(self, widget_name):
 		return self.parent_view.getWidget(widget_name)
@@ -226,7 +227,7 @@ class ConnectionView:
 		settings_button.pack(side = "left")
 		buttonframe.pack()
 	
-	
+	"""
 	def destroy(self):
 		for widget in self.widgets:
 			try:
@@ -237,19 +238,27 @@ class ConnectionView:
 			except Exception as e:
 				print("Exception:",e)
 				pass
+	"""
 		
 		
 		
 	
 
 		
-class SettingsView(View):
+class SettingsView:
 	def __init__(self, parent, main_view):
-		super().__init__(parent)
+		self.widgets = dict()
+		self.widgets["window"] = parent
 		parent.title("Settings")
 		parent.geometry("400x400")
 		self.main_view = main_view
 		self.construct_view()
+	
+	def getWidget(self, widget_name):
+		return self.widgets[widget_name]
+	
+	def addWidget(self, name, widget):
+		self.widgets[name] = widget
 	
 	def getParentViewWidget(self,name):
 		return self.main_view.getWidget(name)
@@ -316,12 +325,19 @@ class SettingsView(View):
 
 
 
-class AddConnectionView(View):
+class AddConnectionView:
 	def __init__(self,parent, main_view):
-		super().__init__(parent)
+		self.widgets = dict()
+		self.widgets["window"] = parent
 		parent.title("Available Connections")
 		self.main_view = main_view
 		parent.geometry("320x250")
+		
+	def getWidget(self, widget_name):
+		return self.widgets[widget_name]
+	
+	def addWidget(self, name, widget):
+		self.widgets[name] = widget
 		
 	def getParentViewWidget(self,name):
 		return self.main_view.getWidget(name)

@@ -191,82 +191,77 @@ class MessageController:
 		self.view = view
 		self.model = model
 		self.__setEventBindings()
-		self.receive = None
-		self.send = None
 		self.__run()
 		
 	
 	def __run(self):
-		#self.receive = threading.Thread(target = self.__getMessages)
-		#self.receive.start()
-		pass
+		window = self.view.getWidget("window")
+		window.after(10, self.__getMessages)
 		
+		
+	"""
+	def __send_message(self):
+		message_input = self.view.getWidget("entry")#"message_input")
+		message = message_input.get("1.0",tk.END)
+		message = message.strip()
+		address = self.view.getName()
+		self.model.setSendingAddress(address)
+		self.model.load(message)
+		
+		text_widget = self.view.getWidget("text_widget")
+		text_widget.config(state="normal")
+		if self.model.send(): #and self.model.isFirstLine() need to adjust
+			message = self.model.getMessageLastSent()
+			text_widget.insert(tk.END,message + "\n")
+		else:
+			message = self.model.getMessageLastSent()
+			text_widget.insert(tk.END,message + "  FAILED\n")
+		text_widget.config(state=tk.DISABLED)
+	"""
 	
 	def __send_message(self):
 		message_input = self.view.getWidget("entry")#"message_input")
 		message = message_input.get("1.0",tk.END)
 		message = message.strip()
 		address = self.view.getName()
-		print("address:" + address)
-		address = address.strip()
 		self.model.setSendingAddress(address)
-		#for every new line add a \t
-		self.model.incrementMessageNumber()
 		self.model.load(message)
 		self.__sending()
 	
 	def __sending(self):
-		while not self.model.empty():
-			window = self.view.getParentWidget("window")
-			text_widget = self.view.getWidget("text_widget")
-			number = self.model.getMessageNumber()
+		text_widget = self.view.getWidget("text_widget")
+		window = self.view.getWidget("window")
+		sent = self.model.send()
+		
+		if not sent:
 			text_widget.config(state="normal")
-			entry = self.view.getWidget("entry")
-			failed = False
-		
-			if self.model.send(): #and self.model.isFirstLine() need to adjust
-				message = self.model.getMessageLastSent()
-				#if self.model.sentFirstLine():
-				text_widget.insert(tk.END, str(number) + "\t" + message + "\n")
-				#	self.model.setSentFirstLine(False)
-				#else:
-					#text_widget.insert(tk.END, " " + "\t" + message + "\n")
-				#	pass
-			else:
-				message = self.model.getMessageLastSent()
-				#text_widget.insert(tk.END, str(number) + "\t" + message + "  FAILED\n")
-				failed = True
+			message = self.model.getFailedMessage()
+			text_widget.insert(tk.END,message + "  FAILED\n")
 			text_widget.config(state=tk.DISABLED)
+			self.model.setMessageLastSent("")
+			return
 		
-			if failed:
-				self.model.clearBuffer()
-				self.model.setSentFirstLine(True)
-				
+		if not self.model.empty():
+			window.after(10, self.__sending)
+		else:
+			text_widget.config(state="normal")
+			message = self.model.getMessageLastSent()
+			text_widget.insert(tk.END,message + "\n")
+			text_widget.config(state=tk.DISABLED)
+			self.model.setMessageLastSent("")
 			
-			if self.model.sentLastLine():
-				print("message last sent: ", self.model.getMessageLastSent())
-				self.model.setSentLastLine(False)
-				self.model.setSentFirstLine(True)
-			#window.after(10, self.__sending)
-		window.update()
-		#else:
-		print("tel me your secrets *******************")
-		#self.send.join()
+			
 				
 	
 	def __getMessages(self):
-		while True:
-			message = self.model.receivePersonalMessage()
-			if message != None and "\\x" not in message and message != "" and message != "\n":
-				text_widget = self.view.getWidget("text_widget")
-				message = message.strip()
-				self.model.incrementMessageNumber()
-				number = self.model.getMessageNumber()
-				text_widget.config(state="normal")
-				text_widget.insert(tk.END, str(number) + "\t" + message + "\n")
-				text_widget.config(state=tk.DISABLED)
-			#window = self.view.getWidget("window")
-			#window.after(50, self.__getMessages)
+		message = self.model.receive()
+		if message != None:
+			text_widget = self.view.getWidget("text_widget")
+			text_widget.config(state="normal")
+			text_widget.insert(tk.END, message + "\n")
+			text_widget.config(state=tk.DISABLED)
+		window = self.view.getWidget("window")
+		window.after(10, self.__getMessages)
 		
 	
 	def __clearTextWidget(self):
@@ -280,9 +275,6 @@ class MessageController:
 		self.send = threading.Thread(target = self.__send_message)
 		self.send.start()
 	"""
-		
-			
-	
 	
 	def __setEventBindings(self):
 		
@@ -293,11 +285,7 @@ class MessageController:
 		clear_button["command"] = self.__clearTextWidget
 		
 		window = self.view.getWidget("window")
-	
-	def __del__(self):
-		self.receive.join()
-		self.send.join()
-		print("what is going on")
+
 		
 		
 		

@@ -10,9 +10,10 @@ class Network:
 		self.settings_open = False
 		self.add_connections_open = False 
 		self.connection = False
-		self.message_number = 0
+		self.message_number = 1
 		self.message_complete = False
-		self.message_buffer = []
+		self.send_buffer = []
+		self.receive_buffer = ""
 		self.sent_last_line = False
 		self.sent_first_line = True
 		self.chunk_length = 28
@@ -27,33 +28,66 @@ class Network:
 		pass
 	
 	def clearBuffer(self):
-		self.message_buffer = []
+		self.send_buffer = []
 	
 	def incrementMessageNumber(self):
 		self.message_number += 1
 	
 	def setSendingAddress(self, address):
 		print("setting sending address")
-		#self.transceiver.set_TX_address(address)
+		self.transceiver.set_TX_address(address)
 	
 	def getMessageNumber(self):
 		return self.message_number
 	
 	def load(self, message):
-		self.message_buffer = util.messageChunks(message, self.chunk_length)
-		self.message_buffer.append(chr(0)) #marks end of buffer
+		self.send_buffer = util.messageChunks(message, self.chunk_length)
+		self.send_buffer.append(chr(0)) #marks end of buffer
 	
 	def getMessageLastSent(self):
 		return self.message_last_sent
+	
+	def getFailedMessage(self):
+		message = self.message_last_sent
+		self.message_last_sent = ""
+		return message
+	
+	def setMessageLastSent(self,value):
+		self.message_last_sent = value
 		
+	"""	
 	def send(self):
-		message = self.message_buffer.pop(0)
-		self.message_last_sent = message
-		
-		if message == chr(0):
-			self.sent_last_line = True
+		self.message_last_sent = str(self.message_number)
+		while not self.empty():
+			message = self.send_buffer.pop(0)
+			if message != chr(0):
+				self.message_last_sent +=  "\t" + message + "\n"
+			if not self.transceiver.sendMediaMessage(message):
+				return False
+		self.message_number += 1
+		return True
+	"""
+	
+	def send(self):
+		if self.message_last_sent == "":
+			self.message_last_sent = str(self.message_number)
 			
-		return True #self.transceiver.sendMediaMessage(message)
+		if not self.empty():
+			message = self.send_buffer.pop(0)
+			if message != chr(0):
+				self.message_last_sent +=  "\t" + message + "\n"
+			else:
+				self.message_number += 1
+				
+			if not self.transceiver.sendMediaMessage(message):
+				self.message_number += 1
+				return False
+		else:
+			self.message_last_sent = ""
+			
+		
+		return True
+	
 	
 	def sentFirstLine(self):
 		return self.sent_first_line
@@ -68,7 +102,7 @@ class Network:
 		self.sent_last_line = value
 	
 	def empty(self):
-		return len(self.message_buffer) == 0
+		return len(self.send_buffer) == 0
 	
 	def isMessageComplete(self):
 		return self.message_complete
@@ -79,6 +113,25 @@ class Network:
 	def receivePersonalMessage(self):
 		return self.transceiver.receivePersonalMessage()
 	
+	def receive(self):
+		message = self.transceiver.receivePersonalMessage()
+		
+		if message != None  and "\\x" not in message and message != "" and message != "\n":
+			if self.receive_buffer == "":
+				self.receive_buffer += str(self.message_number) +"\t" + message + "\n"
+			else:
+				self.receive_buffer += " \t" + message + "\n"
+			return None
+		
+		if message == "":
+			receive = self.receive_buffer
+			self.receive_buffer = ""
+			self.message_number += 1
+			return receive
+			
+		return None
+		
+	
 	def addConnection(self, connection):
 		self.connections[connection.getViewName()] = connection
 	
@@ -87,7 +140,7 @@ class Network:
 			del self.connections[connection_name]
 	
 	def resetMessageNumber(self):
-		self.message_number = 0
+		self.message_number = 1
 	
 	def isSettingsOpen(self):
 		return self.settings_open
