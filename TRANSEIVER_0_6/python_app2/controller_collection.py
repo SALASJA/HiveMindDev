@@ -9,21 +9,28 @@ class Controller:
 		self.view = view
 		self.model = model
 		self.view.construct_view()
+		self.construct_subcontrollers()
 		self.set_events()
 	
+	def construct_subcontrollers(self):
+		settings_view = self.view.getSettingsView()
+		settings_view.setMainView(self.view)
+		SettingsController(settings_view, self.model)
+		
 	def set_events(self):
 		dropmenu = self.view.getWidget("Application_dropmenu")
-		dropmenu.entryconfig(0, command = self.settings)
-		dropmenu.entryconfig(1, command = self.add_connection)
+		dropmenu.entryconfig(0, command = self.open_settings)
+		dropmenu.entryconfig(1, command = self.open_add_connection)
 	
-	def settings(self):
-		settings_window = tk.Toplevel()
-		settings_view = SettingsView(settings_window)
-		
-		settings_view.setMainView(self.view)
-		self.view.setSettingsView(settings_view)
-		
-		SettingsController(settings_view,self.model)
+	def open_settings(self):
+		settings_view = self.view.getSettingsView()
+		settings_view.show()
+	
+	def open_add_connection(self):
+		add_connection_view = self.view.getAddConnectionView()
+		add_connection_view.show() #refresh
+		add_connection_view.setMainView(self.view)
+		AddConnectionController(add_connection_view, self.model)
 	
 	def add_connection(self):
 		add_connection_window = tk.Toplevel()
@@ -39,7 +46,7 @@ class SettingsController:
 	def __init__(self,view, model):
 		self.view = view
 		self.model = model
-		self.__setEventBindings()
+		self.set_events()
 	
 		
 	
@@ -66,39 +73,46 @@ class SettingsController:
 			menu.add_command(label=val,command=lambda v=port_choice,l=val:v.set(l))
 		port_choice.set(serial_ports[0])		
 	
-	def __setEventBindings(self):
+	def set_events(self):
 		port_refresh_button = self.view.getWidget("port_refresh_button")
 		port_refresh_button["command"] = self.__updatePortList
 		
 		port_select_button = self.view.getWidget("port_select_button")
 		port_select_button["command"] = self.__usePort
+	
+		
 
 
-class AddConnectionController:
+class AddConnectionController: #NOW UPDATEING THIS
 	def __init__(self,view, model):
 		self.view = view
 		self.model = model
+		self.set_events()
+	
+	def look_for_connections(self):
 		statusbar = self.view.getParentViewWidget("statusbar")
-		if statusbar["text"] == "No MasterNode Connection":
-			self.view.errorLook()
-		else:
-			self.view.waitingLook()
-			window = self.view.getWidget("window")
-			window.update()
+		if statusbar["text"] != "No MasterNode Connection":
+			toplevel_add_connection_window = self.view.getWidget("toplevel_add_connection_window")
+			toplevel_add_connection_window.title("SEARCHING")
+			toplevel_add_connection_window.update()
 			connections = self.model.findConnections()
-			self.view.connectionsLook(connections)
-			self.set_events()
+			toplevel_add_connection_window.title("DONE SEARCHING")
+			toplevel_add_connection_window.update()
+			self.view.add_connections(connections)
+			labels = self.view.getWidget("connections")
+			for label in labels:
+				label.bind("<Button-1>", self.select_connection)
 		
+		 
 	
 	def set_events(self):
-		labels = self.view.getWidget("connections")
-		for label in labels:
-			label.bind("<Button-1>", self.select_connection)
 		window = self.view.getWidget("widget_canvas")
 		window.bind("<Key>", self.multiple)
 		window.focus_set()
 		select_button = self.view.getWidget("select_button")
 		select_button["command"] = self.add_connections
+		node_search_button = self.view.getWidget("node_search_button")
+		node_search_button["command"] = self.look_for_connections
 	
 	def multiple(self, event):
 		statusbar = self.view.getWidget("statusbar")
@@ -115,43 +129,32 @@ class AddConnectionController:
 				label["bg"] = "white"
 			
 		label = event.widget
-		label["bg"] = "light blue"
-	
-	def add_connections(self):
-		main_view = self.view.getMainView()
-		"""
-		labels = []
-		for i in range(15):
-			labels.append(str(i))
-		"""
-		labels = self.view.getWidget("connections")
-		names = []
-		for label in labels:
-			names.append(label["text"])
-		main_view.add_connections(names)
-		connections = main_view.getWidget("connections")
-		
-		for connection_name in connections:
-			connection = connections[connection_name]
-			self.model.addConnection(ConnectionController(connection,self.model)) #a lot of connection controllers but multiple
-			
+		label["bg"] = "light blue"	
 		
 	
 	def add_connections(self):
 		main_view = self.view.getMainView()
+		message_view = main_view.getMessageView()
+		connection_views = main_view.getConnectionViews()
+		choices = self.view.getWidget("connections")
+		for choice in choices:
+			if choice["text"] not in connection_views and choice["bg"] == "light blue":
+				main_view.add_connection(choice["text"])
+				message_view.add_node_to_list(choice["text"])
+				
+		for connection_view_name in connection_views:
+			view = connection_views[connection_view_name]
+			view.setMainView(main_view)
+			ConnectionController(view,self.model)
 		
-	def __del__(self):
-		labels = self.view.getWidget("connections")
-		for label in labels:
-			label.unbind(self.select_connection)
 		
-		window = self.view.getWidget("window")
-		window.unbind(self.button_hold)
+
 
 class ConnectionController:
 	def __init__(self, view, model):
 		self.view = view
 		self.model = model
+		self.view.constructLook()
 		self.set_events()
 	
 	def set_events(self):
@@ -173,18 +176,20 @@ class ConnectionController:
 	def __del__(self):
 		main_view = self.view.getMainView()
 		main_view.remove_connection(self.view.getName()) #gets destroyed when __del__ called anyway
-		self.model.removeConnection(self.view.getName())
+		message_view = self.view.getMessageView()
+		message_view.remove_node_from_list(self.view.getName())
+		#self.model.removeConnection(self.view.getName())
 	
 	def getViewName(self):
 		return self.view.getName()
 	
 	def open_message_window(self):
-		#message_window = tk.Toplevel(self.view.getMainView().getWidget("window"))
-		message_view = self.view.getMessageView() #********************** CHECKPOINT
-		message_view.addAddressToList(self.view.getName())
+		main_view = self.view.getMainView()
+		message_view = main_view.getMessageView()
+		if not self.model.isMessageControllerCreated():
+			MessageController(message_view, self.model)
+			self.model.setMessageControllerCreated(True)
 		message_view.show()
-		MessageController(message_view, (self.view.getName(), self.model))
-		print("what is happening")
 		
 	def open_data_window(self):
 		print("hmmmm")
@@ -206,43 +211,70 @@ class MessageController:
 	def __init__(self, view, model):
 		self.view = view
 		self.model = model
+		self.send_thread = None #i create the threads in the module
 		self.__setEventBindings()
 		self.__run()
 		
 	
 	def __run(self):
 		window = self.view.getWidget("window")
-		window.after(10, self.__getMessages)
+		#window.after(10, self.__getMessages)
 		
-		
-	"""
-	def __send_message(self):
-		message_input = self.view.getWidget("entry")#"message_input")
-		message = message_input.get("1.0",tk.END)
-		message = message.strip()
-		address = self.view.getName()
-		self.model.setSendingAddress(address)
-		self.model.load(message)
-		
-		text_widget = self.view.getWidget("text_widget")
-		text_widget.config(state="normal")
-		if self.model.send(): #and self.model.isFirstLine() need to adjust
-			message = self.model.getMessageLastSent()
-			text_widget.insert(tk.END,message + "\n")
-		else:
-			message = self.model.getMessageLastSent()
-			text_widget.insert(tk.END,message + "  FAILED\n")
-		text_widget.config(state=tk.DISABLED)
-	"""
 	
 	def __send_message(self):
 		message_input = self.view.getWidget("entry")#"message_input")
 		message = message_input.get("1.0",tk.END)
 		message = message.strip()
-		address = self.view.getName()
+		node_list = self.view.getNodeList() #must load addresses as well onto model to make this affective
+		address = list(node_list)[0]        #set the address within the model i
 		self.model.setSendingAddress(address)
 		self.model.load(message)
+		#self.__sending()
+		text_widget = self.view.getWidget("text_widget")
+		window = self.view.getWidget("window")
+		sent = self.model.send()
+		while sent and not self.model.empty():
+			sent = self.model.send()
+		
+		if not sent:
+			text_widget.config(state="normal")
+			message = self.model.getFailedMessage()
+			text_widget.insert(tk.END,message + "  FAILED\n")
+			text_widget.config(state=tk.DISABLED)
+			self.model.setMessageLastSent("")
+			return
+		
+		if self.model.empty():
+			text_widget.config(state="normal")
+			message = self.model.getMessageLastSent()
+			text_widget.insert(tk.END,message + "\n")
+			text_widget.config(state=tk.DISABLED)
+			self.model.setMessageLastSent("")
+		self.send_thread.join()
+		
+		
+			
+		
+		
+		
+		
+	"""
+	def __send_message(self):
+		message_input = self.view.getWidget("entry")#"message_input")
+		message = message_input.get("1.0",tk.END)
+		message = message.strip()
+		node_list = self.view.getNodeList() #must load addresses as well onto model to make this affective
+		addresses = []
+		for node in node_list:
+			var = node[0]
+			if var.get() == 1:
+				addresses.append(node[1]["text"])
+		
+		self.model.load_addresses(addresses)
+		#self.model.setSendingAddress(address)
+		self.model.load(message)
 		self.__sending()
+	"""
 	
 	def __sending(self):
 		text_widget = self.view.getWidget("text_widget")
@@ -257,7 +289,7 @@ class MessageController:
 			self.model.setMessageLastSent("")
 			return
 		
-		if not self.model.empty():
+		if not self.model.empty():   #here do something related to the addresses
 			window.after(10, self.__sending)
 		else:
 			text_widget.config(state="normal")
@@ -286,16 +318,16 @@ class MessageController:
 		text_widget.config(state="normal")
 		text_widget.delete("1.0", tk.END)
 		text_widget.config(state=tk.DISABLED)
-	"""
+	
 	def __send_message_thread(self):
-		self.send = threading.Thread(target = self.__send_message)
-		self.send.start()
-	"""
+		self.send_thread = threading.Thread(target = self.__send_message)
+		self.send_thread.start()
+	
 	
 	def __setEventBindings(self):
 		
 		send_button = self.view.getWidget("send_button")
-		send_button["command"] = self.__send_message
+		send_button["command"] = self.__send_message_thread
 		
 		clear_button = self.view.getWidget("clear_button")
 		clear_button["command"] = self.__clearTextWidget
