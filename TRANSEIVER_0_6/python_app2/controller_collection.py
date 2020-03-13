@@ -176,7 +176,7 @@ class ConnectionController:
 	def __del__(self):
 		main_view = self.view.getMainView()
 		main_view.remove_connection(self.view.getName()) #gets destroyed when __del__ called anyway
-		message_view = self.view.getMessageView()
+		message_view = main_view.getMessageView()
 		message_view.remove_node_from_list(self.view.getName())
 		#self.model.removeConnection(self.view.getName())
 	
@@ -225,16 +225,17 @@ class MessageController:
 		message_input = self.view.getWidget("entry")#"message_input")
 		message = message_input.get("1.0",tk.END)
 		message = message.strip()
-		node_list = self.view.getNodeList() #must load addresses as well onto model to make this affective
-		address = list(node_list)[0]        #set the address within the model i
-		self.model.setSendingAddress(address)
-		self.model.load(message)
+		addresses = self.view.getNodeList() #must load addresses as well onto model to make this affective      #set the address within the model i
 		#self.__sending()
 		text_widget = self.view.getWidget("text_widget")
 		window = self.view.getWidget("window")
-		sent = self.model.send()
-		while sent and not self.model.empty():
+		for address in addresses:
+			self.model.setSendingAddress(address)
+			self.model.load(message)
 			sent = self.model.send()
+			while sent and not self.model.empty():
+				sent = self.model.send()
+		
 		
 		if not sent:
 			text_widget.config(state="normal")
@@ -243,14 +244,14 @@ class MessageController:
 			text_widget.config(state=tk.DISABLED)
 			self.model.setMessageLastSent("")
 			return
-		
+	
 		if self.model.empty():
 			text_widget.config(state="normal")
 			message = self.model.getMessageLastSent()
 			text_widget.insert(tk.END,message + "\n")
 			text_widget.config(state=tk.DISABLED)
 			self.model.setMessageLastSent("")
-		self.send_thread.join()
+		
 		
 		
 			
@@ -320,10 +321,12 @@ class MessageController:
 		text_widget.config(state=tk.DISABLED)
 	
 	def __send_message_thread(self):
+		if self.send_thread != None:
+			self.send_thread.join()
 		self.send_thread = threading.Thread(target = self.__send_message)
 		self.send_thread.start()
-	
-	
+		
+		
 	def __setEventBindings(self):
 		
 		send_button = self.view.getWidget("send_button")
@@ -333,6 +336,10 @@ class MessageController:
 		clear_button["command"] = self.__clearTextWidget
 		
 		window = self.view.getWidget("window")
+	
+	def __del__(self):
+		if self.send_thread != None:
+			self.send_thread.join()
 
 		
 		

@@ -16,9 +16,22 @@ class MainView:
 		self.connectionViews = dict()
 		self.settingsView = SettingsView(tk.Toplevel())
 		self.addConnectionView = AddConnectionView(tk.Toplevel())
-		self.messageView = MessageView(tk.Toplevel()) #hiding it
+		self.messageView = MessageView(tk.Toplevel()) #xhiding it
 		 #maybe just make it automatically hide within the view class
 	
+	def destroy(self):
+		toplevel_settings_window = self.settingsView.getWidget("toplevel_settings_window")
+		toplevel_settings_window.quit()
+		
+		toplevel_add_connection_window = self.settingsView.getWidget("toplevel_add_connection_window")
+		toplevel_add_connection_window.quit()
+		
+		message_window = self.messageView.getWidget("window")
+		message_window.quit()
+		
+		window = self.widgets["parent"]
+		window.quit()
+		
 	def getWidget(self, widget_name):
 		return self.widgets[widget_name]
 	
@@ -140,6 +153,8 @@ class MainView:
 		
 	
 	def remove_connection(self, address): #need to fix this
+		if address not in self.connectionViews:
+			return 
 		connection = self.connectionViews[address]
 		connection.destroy()
 		del self.connectionViews[address]
@@ -148,7 +163,7 @@ class MainView:
 		canvas.update_idletasks()
 		canvas.configure(scrollregion=canvas.bbox('all'), yscrollcommand=scroll_y.set)
 		
-		if len(connections) == 0:
+		if len(self.connectionViews) == 0:
 			canvas.pack_forget()
 			scroll_y.pack_forget()
 			self.connection_canvas_hiding = True
@@ -446,30 +461,16 @@ class ConnectionView:
 	
 	
 	def destroy(self):
-		for widget in self.widgets:
-			try:
-				if widget != "parent":
-					self.widgets[widget].pack_forget()
-					self.widgets[widget].destroy()
-					del widget[widget]
-			except Exception as e:
-				print("Exception:",e)
-				pass
-	
-		
-		
-		
-	
-
-		
-
-		
-
-
-
-	
-
-
+		widgets = list(self.widgets.keys())
+		for widget in widgets:
+			#try:
+			if widget != "parent" and widget != "image":
+				self.widgets[widget].pack_forget()
+				self.widgets[widget].destroy()
+				del self.widgets[widget]
+			#except Exception as e:
+			#	print("Exception:",e)
+			#	pass
 
 class MessageView:
 	def __init__(self, window, name = None, main_view = None):
@@ -494,6 +495,9 @@ class MessageView:
 		
 	def addWidget(self, name, widget):
 		self.widgets[name] = widget
+	
+	def getWidget(self, widget):
+		return self.widgets[widget]
 	
 	def getParentWidget(self, widget):
 		return self.main_view.getWidget(widget)
