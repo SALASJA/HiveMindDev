@@ -14,23 +14,10 @@ class MainView:
 		self.connection_canvas_hiding = False
 		
 		self.connectionViews = dict()
-		self.settingsView = SettingsView(tk.Toplevel())
-		self.addConnectionView = AddConnectionView(tk.Toplevel())
-		self.messageView = MessageView(tk.Toplevel()) #xhiding it
+		self.settingsView = SettingsView(tk.Toplevel(parent))
+		self.addConnectionView = AddConnectionView(tk.Toplevel(parent))
+		self.messageView = MessageView(tk.Toplevel(parent)) #xhiding it
 		 #maybe just make it automatically hide within the view class
-	
-	def destroy(self):
-		toplevel_settings_window = self.settingsView.getWidget("toplevel_settings_window")
-		toplevel_settings_window.quit()
-		
-		toplevel_add_connection_window = self.settingsView.getWidget("toplevel_add_connection_window")
-		toplevel_add_connection_window.quit()
-		
-		message_window = self.messageView.getWidget("window")
-		message_window.quit()
-		
-		window = self.widgets["parent"]
-		window.quit()
 		
 	def getWidget(self, widget_name):
 		return self.widgets[widget_name]
@@ -482,7 +469,7 @@ class MessageView:
 		window.resizable(0,0)
 		window.title(name)
 		window.withdraw()
-		window.protocol('WM_DELETE_WINDOW', self.hide)
+		#window.protocol('WM_DELETE_WINDOW', self.hide)
 		self.construct_look()
 	
 	def hide(self):

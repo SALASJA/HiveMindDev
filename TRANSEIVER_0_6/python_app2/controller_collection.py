@@ -21,6 +21,8 @@ class Controller:
 		dropmenu = self.view.getWidget("Application_dropmenu")
 		dropmenu.entryconfig(0, command = self.open_settings)
 		dropmenu.entryconfig(1, command = self.open_add_connection)
+		window = self.view.getWidget("window")
+		
 	
 	def open_settings(self):
 		settings_view = self.view.getSettingsView()
@@ -40,6 +42,8 @@ class Controller:
 		add_connection_view.setMainView(self.view)
 		
 		AddConnectionController(add_connection_view, self.model)
+	
+		
 
 
 class SettingsController:
@@ -212,16 +216,27 @@ class MessageController:
 		self.view = view
 		self.model = model
 		self.send_thread = None #i create the threads in the module
+		self.receive_thread = None
+		self.lock = threading.Lock()
+		self.loop = False
 		self.__setEventBindings()
 		self.__run()
 		
 	
 	def __run(self):
+		self.receive_thread = threading.Thread(target = self.__getMessages, args = (self.lock,) )
+		#self.receive_thread.setDaemon(True)
+		self.receive_thread.start()
+	
+	def hide(self):
 		window = self.view.getWidget("window")
-		#window.after(10, self.__getMessages)
+		window.withdraw()
+		if self.send_thread != None:
+			self.send_thread.join()
+		
 		
 	
-	def __send_message(self):
+	def __send_message(self, lock):
 		message_input = self.view.getWidget("entry")#"message_input")
 		message = message_input.get("1.0",tk.END)
 		message = message.strip()
@@ -238,18 +253,22 @@ class MessageController:
 		
 		
 		if not sent:
-			text_widget.config(state="normal")
 			message = self.model.getFailedMessage()
+			lock.acquire()
+			text_widget.config(state="normal")
 			text_widget.insert(tk.END,message + "  FAILED\n")
 			text_widget.config(state=tk.DISABLED)
+			lock.release()
 			self.model.setMessageLastSent("")
 			return
 	
 		if self.model.empty():
-			text_widget.config(state="normal")
 			message = self.model.getMessageLastSent()
+			lock.acquire()
+			text_widget.config(state="normal")
 			text_widget.insert(tk.END,message + "\n")
 			text_widget.config(state=tk.DISABLED)
+			lock.release()
 			self.model.setMessageLastSent("")
 		
 		
@@ -302,28 +321,34 @@ class MessageController:
 			
 				
 	
-	def __getMessages(self):
-		message = self.model.receive()
-		if message != None:
-			text_widget = self.view.getWidget("text_widget")
-			text_widget.config(state="normal")
-			text_widget.insert(tk.END, message + "\n")
-			text_widget.config(state=tk.DISABLED)
-		window = self.view.getWidget("window")
-		window.after(10, self.__getMessages)
+	def __getMessages(self, lock):
+		self.loop = True
+		while self.loop:
+			message = self.model.receive()
+			if message != None:
+				text_widget = self.view.getWidget("text_widget")
+				lock.acquire()
+				text_widget.config(state="normal")
+				text_widget.insert(tk.END, message + "\n")
+				text_widget.config(state=tk.DISABLED)
+				lock.release()
+		#window = self.view.getWidget("window")
+		#window.after(10, self.__getMessages)
 		
 	
 	def __clearTextWidget(self):
 		self.model.resetMessageNumber()
 		text_widget = self.view.getWidget("text_widget")
+		self.lock.acquire()
 		text_widget.config(state="normal")
 		text_widget.delete("1.0", tk.END)
 		text_widget.config(state=tk.DISABLED)
+		self.lock.release()
 	
 	def __send_message_thread(self):
 		if self.send_thread != None:
 			self.send_thread.join()
-		self.send_thread = threading.Thread(target = self.__send_message)
+		self.send_thread = threading.Thread(target = self.__send_message, args = (self.lock,))
 		self.send_thread.start()
 		
 		
@@ -336,10 +361,23 @@ class MessageController:
 		clear_button["command"] = self.__clearTextWidget
 		
 		window = self.view.getWidget("window")
+		window.protocol('WM_DELETE_WINDOW', self.hide)
 	
 	def __del__(self):
+		self.loop = False
 		if self.send_thread != None:
-			self.send_thread.join()
+			print("close send thread")
+			try:
+				self.send_thread.join()
+			except:
+				pass
+				
+		if self.receive_thread != None:
+			print("close receive thread")
+			try:
+				self.receive_thread.join()
+			except:
+				pass
 
 		
 		

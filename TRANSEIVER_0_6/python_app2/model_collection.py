@@ -26,7 +26,7 @@ class Network:
 			self.connection = True
 	
 	def closeSerialPort(self):
-		pass
+		self.transceiver.close()
 	
 	def isMessageControllerCreated(self):
 		return self.message_controller_created
@@ -195,6 +195,7 @@ class TransceiverInterface:
 		self.success_queue = None
 		self.rx_address = [0,0,0,0,0,0]
 		self.tx_address = None
+		#self.close = process.
 		if SERIAL_PORT_NAME != None:
 			self.startCommunicationProcess(SERIAL_PORT_NAME, BAUD_RATE)
 
@@ -409,24 +410,34 @@ class TransceiverInterface:
 		
 			
 		return addresses
-				
+	
+	def close(self):
+		if self.communicationProcess != None:
+			self.communicationProcess.terminate()
+			print("closed")
+		
+		if self.receive_queue != None:
+			self.receive_queue.close()
+		
+		if self.send_queue != None:
+			self.send_queue.close()
+		
+		if self.state_queue != None:
+			self.state_queue.close()
+		
+		if self.address_queue != None:
+			self.address_queue.close()
+		
+		if self.file_queue != None:
+			self.file_queue.close()
+		
+		if self.success_queue != None:
+			self.success_queue.close()
 	
 	def __del__(self):
-		self.communicationProcess.join()
-		self.communicationProcess.terminate()
-		self.receive_queue.close()
-		self.send_queue.close()
-		self.state_queue.close()
-		self.address_queue.close()
-		self.file_queue.close()
-		self.success_queue.close()
+		self.close()
 
 
-
-class MasterTransceiverInterface(TransceiverInterface):
-	def __init__(self):
-		pass
-	
 
 
 		
