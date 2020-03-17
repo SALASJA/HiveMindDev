@@ -17,6 +17,8 @@ void print_TX_address(Nrf24 &transeiver);
 void print_receive(uint8_t * buffer);
 void print_success(uint8_t * buffer);
 void process_uart_input(Nrf24 &transeiver, uint8_t * data_buffer);
-void process_recieved(Nrf24 &transeiver, uint8_t * recieve_buffer); 
-
+void process_recieved(Nrf24 &transeiver, uint8_t * recieve_buffer);
+//void output_to_uart_and_acknowledge(Nrf24 &transeiver, uint8_t * receive_buffer); 
+void send_success(Nrf24 &transeiver, uint8_t * receive_buffer);
+void print_fileline(uint8_t * buffer);
 #endif

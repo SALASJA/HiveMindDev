@@ -106,10 +106,6 @@ void process_uart_input(Nrf24 &transeiver, uint8_t * data_buffer){
 	switch(data_buffer[0]){
 		case 0: {
 				  copy(transeiver.RX_ADDR_P_VAL[0], data_buffer + 29);
-				  //for(int i = 29; i < 32; i++){
-				  //	USART_Transmit(data_buffer[i]);
-				  //}
-				  //USART_Transmit('\n');
 				  transeiver.send(data_buffer + 1); //make a macro to shift
 				  while(transeiver.isSending())
 					;
@@ -152,53 +148,118 @@ void process_uart_input(Nrf24 &transeiver, uint8_t * data_buffer){
 			
 	}
 }
+
+/*
 void process_recieved(Nrf24 &transeiver, uint8_t * receive_buffer){
-	static uint8_t success[32] = "<<<success>>>";
-	static uint8_t address[32] = "3";
-	uint8_t sent_address = FALSE;
-	uint8_t receive_address = FALSE;
-	uint8_t on = FALSE;
-	switch(receive_buffer[0]){
-		case '0': PORTD ^= 1 << 5;
+
+	switch(receive_buffer[0]){ //I need to officially add in the command
+		case '0': output_to_uart_and_acknowledge(transeiver, receive_buffer + 1);
+				  break; 
+		case '1': PORTD ^= 1 << 5;
+				  output_to_uart_and_acknowledge(transeiver, receive_buffer + 1);
 				  break;
-		case '1': transeiver.setSuccessMode(!transeiver.isSuccessMode());
+		case '2': transeiver.setSuccessMode(!transeiver.isSuccessMode());
+				  output_to_uart_and_acknowledge(transeiver, receive_buffer + 1);
 		          break;
-		case '2': if(!on){
-				  	PORTD ^= 1 << 5;
-				  	on = TRUE;
-				  }
+		case '3': 
+				  PORTD ^= 1 << 5;
+				  static uint8_t address[32] = "4"; //address received option
+				  static uint8_t temp[3];
+				  copy(transeiver.TX_ADDR_VAL, temp);
 				  transeiver.set_TX_address(receive_buffer + 1);
 		          copy(transeiver.RX_ADDR_P_VAL[0], address + 1);
 		          transeiver.send(address);
-		          transeiver.set_TX_address(transeiver.TX_ADDR_VAL);
-		          sent_address = TRUE;
+		          transeiver.set_TX_address(temp);
 				  break;
-		case '3': print_address(receive_buffer + 1);
-				  receive_address = TRUE;
+				  
+		case '4': print_address(receive_buffer + 1);
 				  break;
-		default :
+		
+		case '5': print_success(receive_buffer + 1);
+				  break;
+		case '6': output_file_to_uart_and_acknowledge(transeiver, receive_buffer + 1);
+				  
+		default : 
 			      break; //dummy statement need to make a new return statement
 	}
-	if(!sent_address && !receive_address){
-		if(transeiver.isSuccessMode()){
-			if(is_success(receive_buffer, success)){
-				//printf("caught\n");
-				print_success(success);
-			}else{
-				print_receive(receive_buffer);
-				transeiver.set_TX_address(receive_buffer + 28);
-				copy(receive_buffer + 28, success + 13); //16
-				//print_receive(success);
-				transeiver.send(success);
-				transeiver.set_TX_address(transeiver.TX_ADDR_VAL);
-			}
-		}
-		else{
-			//printf("success off\n");
-			print_receive(receive_buffer);
-		}
+}*/
+
+void process_recieved(Nrf24 &transeiver, uint8_t * receive_buffer){
+
+	switch(receive_buffer[0]){ //I need to officially add in the command
+		case '0': print_receive(receive_buffer + 1);
+				  if(transeiver.isSuccessMode()){
+				  	send_success(transeiver, receive_buffer + 1);
+				  }
+				  break; 
+				  
+				  
+		case '1': PORTD ^= 1 << 5;
+				  if(transeiver.isSuccessMode()){
+				  	send_success(transeiver, receive_buffer + 1);
+				  }
+				  break;
+				  
+				  
+		case '2': transeiver.setSuccessMode(!transeiver.isSuccessMode());
+				  if(transeiver.isSuccessMode()){
+				  	send_success(transeiver, receive_buffer + 1);
+				  }
+		          break;
+		          
+		          
+		case '3': 
+				  PORTD ^= 1 << 5;
+				  static uint8_t address[32] = "4"; //address received option
+				  static uint8_t temp[3];
+				  copy(transeiver.TX_ADDR_VAL, temp);
+				  transeiver.set_TX_address(receive_buffer + 1);
+		          copy(transeiver.RX_ADDR_P_VAL[0], address + 1);
+		          transeiver.send(address);
+		          transeiver.set_TX_address(temp);
+				  break;
+				  
+		case '4': print_address(receive_buffer + 1);
+				  break;
+		
+		case '5': print_success(receive_buffer + 1);
+				  break;
+				  
+				  
+		case '6': print_fileline(receive_buffer + 1);
+				  if(transeiver.isSuccessMode()){
+				  	send_success(transeiver, receive_buffer + 1);
+				  }
+				  break;
+				  
+		default : 
+			      break; //dummy statement need to make a new return statement
 	}
 }
+/*
+void output_to_uart_and_acknowledge(Nrf24 &transeiver, uint8_t * receive_buffer){
+	static uint8_t temp[3];
+	static uint8_t success[32] = "5";
+	if(transeiver.isSuccessMode()){
+		copy(transeiver.TX_ADDR_VAL, temp);
+		transeiver.set_TX_address(receive_buffer + 27);
+		copy(transeiver.RX_ADDR_P_VAL[0], success + 1); //16
+		transeiver.send(success);
+		transeiver.set_TX_address(temp);
+	}
+	print_receive(receive_buffer);
+}*/
+
+void send_success(Nrf24 &transeiver, uint8_t * receive_buffer){
+	static uint8_t temp[3];
+	static uint8_t success[32] = "5";
+	copy(transeiver.TX_ADDR_VAL, temp);
+	transeiver.set_TX_address(receive_buffer + 27);
+	copy(transeiver.RX_ADDR_P_VAL[0], success + 1); //16
+	transeiver.send(success);
+	transeiver.set_TX_address(temp);
+}
+
 
 void copy(uint8_t * buffer_1, uint8_t * buffer_2){
 	for(int i = 0; i < 3; i++){
@@ -220,6 +281,15 @@ uint8_t is_success(uint8_t * receive, uint8_t * success){
 void print_success(uint8_t * buffer){
 	printf("SUCCESS:");
 	for(uint8_t i = 0; i < 16; i++){
+		USART_Transmit(buffer[i]);
+	}
+	USART_Transmit('\n');
+	
+}
+
+void print_fileline(uint8_t * buffer){
+	printf("FILELINE:");
+	for(uint8_t i = 0; i < 27; i++){
 		USART_Transmit(buffer[i]);
 	}
 	USART_Transmit('\n');

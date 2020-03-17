@@ -80,6 +80,10 @@ void Nrf24::set_RX_address(uint8_t * adr, uint8_t pipe){
 	} 
 
 	set_CE(HIGH);
+	
+	for(int i = 0; i < nrf24_ADDR_LEN; i++){
+		RX_ADDR_P_VAL[pipe][i] = adr[i];
+	}
 
 }
 
@@ -115,6 +119,9 @@ void Nrf24::set_TX_address(uint8_t* adr){
 	/* RX_ADDR_P0 must be set to the sending addr for auto ack to work. */
 	writeRegister(RX_ADDR_P0,RX_ADDR_P_VAL[0],nrf24_ADDR_LEN); 
 	writeRegister(TX_ADDR,adr,nrf24_ADDR_LEN);
+	for(int i = 0; i < nrf24_ADDR_LEN; i++){
+		TX_ADDR_VAL[i] = adr[i];
+	}
 }
 
 uint8_t * Nrf24::get_TX_address(){

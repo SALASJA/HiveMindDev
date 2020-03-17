@@ -16,7 +16,7 @@ class Network:
 		self.receive_buffer = ""
 		self.sent_last_line = False
 		self.sent_first_line = True
-		self.chunk_length = 28
+		self.chunk_length = 27
 		self.message_last_sent = "";
 		self.message_controller_created = False
 		
@@ -128,8 +128,10 @@ class Network:
 	
 	def receive(self):
 		message = self.transceiver.receivePersonalMessage()
+			
 		
 		if message != None  and "\\x" not in message and message != "" and message != "\n":
+				
 			if self.receive_buffer == "":
 				self.receive_buffer += str(self.message_number) +"\t" + message + "\n"
 			else:
@@ -171,7 +173,7 @@ class Network:
 		connections = self.transceiver.finding()
 		return connections
 
-class TransceiverInterface:
+class TransceiverInterface: #rather than as static it should be kept in a seperate thing
 	MESSAGING = 0
 	SET_TX_ADDRESS = 1
 	SET_RX_ADDRESS = 2
@@ -182,8 +184,10 @@ class TransceiverInterface:
 	TOGGLE_LED = 7
 	FINDING = 8
 	FINDING_ADDRESS = "\x00!!"
-	ADDRESS_RETURN = "2"
+	ADDRESS_RETURN = "3"
+	FILE_LINE_SEND = "6"
 	FLUSH = '\r'   #should use something different
+	SUCCESS_RETURN = "0"
 	
 	def __init__(self, SERIAL_PORT_NAME = None, BAUD_RATE = 9600): # there might need to be a node ID nodeid = A, and tx = 00000 and rx = 11111
 		self.communicationProcess = None
@@ -335,13 +339,15 @@ class TransceiverInterface:
 			self.get_RX_address_from_node(chr(ord(message[1]) - ord("0")))
 		elif ord(message[0]) == TransceiverInterface.FINDING:
 			self.finding()
+		elif ord(message[0]) == ord(TransceiverInterface.FILE_LINE_SEND):
+			self.send_queue.put(bytes(chr(TransceiverInterface.MESSAGING) + TransceiverInterface.FILE_LINE_SEND + message +TransceiverInterface.FLUSH, encoding = "utf-8" ))
 		else:
 			self.send_queue.put(bytes(message + TransceiverInterface.FLUSH,encoding = "utf-8"))
 			
 		
 	def sendMediaMessage(self, message): #this has a protocol to retransmit if fails through, yap I know its not using autoack
 		print(message)
-		self.send_queue.put(bytes(chr(TransceiverInterface.MESSAGING) + message + TransceiverInterface.FLUSH,encoding = "utf-8"))
+		self.send_queue.put(bytes(chr(TransceiverInterface.MESSAGING) + TransceiverInterface.SUCCESS_RETURN  + message + TransceiverInterface.FLUSH,encoding = "utf-8"))
 		start = time.monotonic()
 		interval = start
 		success = False
@@ -352,7 +358,7 @@ class TransceiverInterface:
 		while time.monotonic() < start + 15:
 			if time.monotonic() > interval + 1:
 				print("sent again")
-				self.send_queue.put(bytes(chr(TransceiverInterface.MESSAGING) + message + TransceiverInterface.FLUSH,encoding = "utf-8"))
+				self.send_queue.put(bytes(chr(TransceiverInterface.MESSAGING) + TransceiverInterface.SUCCESS_RETURN + message + TransceiverInterface.FLUSH,encoding = "utf-8"))
 				interval = time.monotonic()
 				
 			if not self.success_queue.empty():

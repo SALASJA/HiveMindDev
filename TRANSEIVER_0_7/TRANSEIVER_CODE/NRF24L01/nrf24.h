@@ -23,7 +23,7 @@ class Nrf24{
 		uint8_t NRF24_MESSAGE_LOST  = 1;
 		uint8_t nrf24_CONFIG  = (1<<EN_CRC)|(0<<CRCO);
 		uint8_t TX_ADDR_VAL[5] = {0,'!','!'};
-		uint8_t RX_ADDR_P_VAL[6][5] = {{'z','0','z'}, //it has to be backwards
+		uint8_t RX_ADDR_P_VAL[6][5] = {{'y','0','y'}, //it has to be backwards, this needs to be changed everytime I change the address
                               		   {0,'!','!'},
                                		   {'7','!','!'},
                                        {'8','!','!'},

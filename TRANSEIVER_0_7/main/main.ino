@@ -1,4 +1,4 @@
-#include <spi.h>
+#include <spi.h> //bit banged version of SPI
 #include <nrf24.h>
 #include <nRF24L01.h>
 #include <util.h>
@@ -6,7 +6,7 @@
 #include <avr/interrupt.h>
 
 extern "C"{
-#include <uart.h>
+  #include <uart.h>
 }
 
 
