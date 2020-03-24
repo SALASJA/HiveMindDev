@@ -1,0 +1,16 @@
+TRANSMIT = chr(0)
+SET_TX_ADDRESS = chr(1)
+SET_RX_ADDRESS = chr(2)
+GET_TX_ADDRESS = chr(3)
+GET_RX_ADDRESS = chr(4)
+TOGGLE_SUCCESS_MODE = chr(5)
+GET_SUCCESS_MODE = chr(6)
+TOGGLE_LED = chr(7)
+FINDING = chr(8)
+FINDING_ADDRESS = "\x00!!"
+MESSAGE = "0"
+ADDRESS_RETURN = "3"
+FILE_LINE_SEND = "6"
+FLUSH = '\r'   #should use something different
+SUCCESS_RETURN = "0"
+MESSAGE_LENGTH = 26

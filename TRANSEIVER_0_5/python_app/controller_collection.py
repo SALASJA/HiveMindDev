@@ -1,6 +1,7 @@
 import tkinter as tk
-from view_collection import SettingsView, AddConnectionView
+from view_collection import SettingsView, AddConnectionView, MessageView
 from functools import partial
+import threading
 import glob
 
 class Controller:
@@ -76,7 +77,7 @@ class AddConnectionController:
 			window.update()
 			connections = self.model.findConnections()
 			self.view.connectionsLook(connections)
-			self.set_events()
+		self.set_events()
 		
 	
 	def set_events(self):
@@ -108,7 +109,24 @@ class AddConnectionController:
 	
 	def add_connections(self):
 		main_view = self.view.getMainView()
-		main_view.add_connections(["stuff"] * 10)
+		"""
+		labels = []
+		for i in range(15):
+			labels.append(str(i))
+		"""
+		labels = self.view.getWidget("connections")
+		names = []
+		for label in labels:
+			names.append(label["text"])
+		main_view.add_connections(names)
+		connections = main_view.getWidget("connections")
+		
+		for connection_name in connections:
+			connection = connections[connection_name]
+			self.model.addConnection(ConnectionController(connection,self.model))
+			
+		
+		
 		
 	def __del__(self):
 		labels = self.view.getWidget("connections")
@@ -117,6 +135,158 @@ class AddConnectionController:
 		
 		window = self.view.getWidget("window")
 		window.unbind(self.button_hold)
+
+class ConnectionController:
+	def __init__(self, view, model):
+		self.view = view
+		self.model = model
+		self.set_events()
+	
+	def set_events(self):
+		removebutton = self.view.getWidget("removebutton")
+		removebutton["command"] = self.__del__
+		
+		messagebutton = self.view.getWidget("message_button")
+		messagebutton["command"] = self.open_message_window
+		
+		databutton = self.view.getWidget("data_button")
+		databutton["command"] = self.open_data_window
+		
+		filebutton = self.view.getWidget("file_button")
+		filebutton["command"] = self.open_send_file_window
+		
+		settings_button = self.view.getWidget("settings_button")
+		settings_button["command"] = self.open_settings_window
+	
+	def __del__(self):
+		main_view = self.view.getParentView()
+		main_view.remove_connection(self.view.getName()) #gets destroyed when __del__ called anyway
+		self.model.removeConnection(self.view.getName())
+	
+	def getViewName(self):
+		return self.view.getName()
+	
+	def open_message_window(self):
+		message_window = tk.Toplevel(self.view.getParentView().getWidget("window"))
+		MessageController(MessageView(message_window, self.view.getName(), self.view.getParentView()), self.model)
+		print("what is happening")
+	def open_data_window(self):
+		print("hmmmm")
+		#data_window = tk.Toplevel()
+		#DataController(MessageView(message_window), self.model)
+	
+	def open_send_file_window(self):
+		print("hmmmm")
+		#send_file_window = tk.Toplevel()
+		#SendFileController(MessageView(send_file_window), self.model)
+	
+	def open_settings_window(self):
+		print("hmmm")
+		#settings_window = tk.Toplevel()
+		#SettingsWindowController(settings_window, self.model)
+
+
+class MessageController:
+	def __init__(self, view, model):
+		self.view = view
+		self.model = model
+		self.__setEventBindings()
+		self.__run()
+		
+	
+	def __run(self):
+		window = self.view.getWidget("window")
+		window.after(10, self.__getMessages)
+		
+		
+	"""
+	def __send_message(self):
+		message_input = self.view.getWidget("entry")#"message_input")
+		message = message_input.get("1.0",tk.END)
+		message = message.strip()
+		address = self.view.getName()
+		self.model.setSendingAddress(address)
+		self.model.load(message)
+		
+		text_widget = self.view.getWidget("text_widget")
+		text_widget.config(state="normal")
+		if self.model.send(): #and self.model.isFirstLine() need to adjust
+			message = self.model.getMessageLastSent()
+			text_widget.insert(tk.END,message + "\n")
+		else:
+			message = self.model.getMessageLastSent()
+			text_widget.insert(tk.END,message + "  FAILED\n")
+		text_widget.config(state=tk.DISABLED)
+	"""
+	
+	def __send_message(self):
+		message_input = self.view.getWidget("entry")#"message_input")
+		message = message_input.get("1.0",tk.END)
+		message = message.strip()
+		address = self.view.getName()
+		self.model.setSendingAddress(address)
+		self.model.load(message)
+		self.__sending()
+	
+	def __sending(self):
+		text_widget = self.view.getWidget("text_widget")
+		window = self.view.getWidget("window")
+		sent = self.model.send()
+		
+		if not sent:
+			text_widget.config(state="normal")
+			message = self.model.getFailedMessage()
+			text_widget.insert(tk.END,message + "  FAILED\n")
+			text_widget.config(state=tk.DISABLED)
+			self.model.setMessageLastSent("")
+			return
+		
+		if not self.model.empty():
+			window.after(10, self.__sending)
+		else:
+			text_widget.config(state="normal")
+			message = self.model.getMessageLastSent()
+			text_widget.insert(tk.END,message + "\n")
+			text_widget.config(state=tk.DISABLED)
+			self.model.setMessageLastSent("")
+			
+			
+				
+	
+	def __getMessages(self):
+		message = self.model.receive()
+		if message != None:
+			text_widget = self.view.getWidget("text_widget")
+			text_widget.config(state="normal")
+			text_widget.insert(tk.END, message + "\n")
+			text_widget.config(state=tk.DISABLED)
+		window = self.view.getWidget("window")
+		window.after(10, self.__getMessages)
+		
+	
+	def __clearTextWidget(self):
+		self.model.resetMessageNumber()
+		text_widget = self.view.getWidget("text_widget")
+		text_widget.config(state="normal")
+		text_widget.delete("1.0", tk.END)
+		text_widget.config(state=tk.DISABLED)
+	"""
+	def __send_message_thread(self):
+		self.send = threading.Thread(target = self.__send_message)
+		self.send.start()
+	"""
+	
+	def __setEventBindings(self):
+		
+		send_button = self.view.getWidget("send_button")
+		send_button["command"] = self.__send_message
+		
+		clear_button = self.view.getWidget("clear_button")
+		clear_button["command"] = self.__clearTextWidget
+		
+		window = self.view.getWidget("window")
+
+		
 		
 		
 		
