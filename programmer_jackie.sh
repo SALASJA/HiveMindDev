@@ -15,5 +15,5 @@ do
 	#avrdude -V -F -p ATmega328P -P ${currentport[i]} -c stk500v1 -b 115200 -U flash:w:$TX/main.hex:i
 	#/Applications/Arduino.app/Contents/Java/hardware/tools/avr/bin/avrdude -C/Applications/Arduino.app/Contents/Java/hardware/tools/avr/etc/avrdude.conf -v -patmega328p -carduino -P/dev/cu.wchusbserial1420 -b57600 -D -Uflash:w:${mainshex[i]}:i 
 	#the above line is what extracted from arduino IDE's compilation, for some reason some boards need to be programmed like this
-	$tool_D/avrdude -C/Users/jackiecuong/Downloads/Arduino/Contents/Java/hardware/tools/avr/etc/avrdude.conf -v -patmega328p -carduino -P/dev/cu.usbserial-1410 -b115200 -D -Uflash:w:$TX/main.hex:i 
+	$tool_D/avrdude -C/Users/jackiecuong/Downloads/Arduino/Contents/Java/hardware/tools/avr/etc/avrdude.conf -v -patmega328p -carduino -P/dev/cu.usbserial-1430 -b115200 -D -Uflash:w:$TX/main.hex:i 
 done
