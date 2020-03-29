@@ -16,6 +16,7 @@ class MainView:
 		self.connectionViews = dict()
 		self.settingsView = SettingsView(tk.Toplevel(parent))
 		self.addConnectionView = AddConnectionView(tk.Toplevel(parent))
+		self.historyView = HistoryView(tk.Toplevel(parent))
 		self.messageView = MessageView(tk.Toplevel(parent)) #xhiding it
 		 #maybe just make it automatically hide within the view class
 		
@@ -37,6 +38,13 @@ class MainView:
 	def getSettingsView(self):
 		return self.settingsView
 	
+	
+	def setHistoryView(self,view):
+		self.historyView = view
+	
+	def getHistoryView(self):
+		return self.historyView
+		
 	def setAddConnectionView(self, view):
 		self.addConnectionView = view
 	
@@ -64,6 +72,7 @@ class MainView:
 		menu.add_cascade(label = "Application", menu = submenu)
 		submenu.add_command(label = "Settings")
 		submenu.add_command(label = "Add Connection")
+		submenu.add_command(label = "History")
 	
 	def constructNoConnectionLabel(self,window):
 		frame = tk.Frame(window)
@@ -197,9 +206,6 @@ class SettingsView:
 		
 		tab_parent.pack(expand=1, fill='both')
 		
-		
-		
-	
 	def construct_SerialPort_Connection_settings_tab(self, tab_parent):
 		tab = ttk.Frame(tab_parent)
 		self.widgets["Serial_port_connections_tab"] = tab
@@ -600,6 +606,39 @@ class MessageView:
 		clear_button = tk.Button(input_frame, text = "clear")
 		self.widgets["clear_button"] = clear_button
 		clear_button.pack(side = tk.LEFT)
+		
+class HistoryView:
+	def __init__(self,toplevel_history_window):
+		self.widgets = dict()
+		self.widgets["toplevel_history_window"] = toplevel_history_window
+		toplevel_history_window.title("History")
+		toplevel_history_window.geometry("400x600")
+		toplevel_history_window.withdraw()
+		toplevel_history_window.protocol('WM_DELETE_WINDOW', self.hide)
+		self.main_view = None
+			
+		
 	
+	def hide(self):
+		toplevel_history_window = self.widgets["toplevel_history_window"]
+		toplevel_history_window.withdraw()
+		
+	def show(self):
+		toplevel_history_window = self.widgets["toplevel_history_window"]
+		toplevel_history_window.deiconify()
+		
+	def getWidget(self, widget_name):
+		return self.widgets[widget_name]
 	
+	def addWidget(self, name, widget):
+		self.widgets[name] = widget
+	
+	def setMainView(self, main_view):
+		self.main_view = main_view
+		
+	def getParentViewWidget(self,name):
+		return self.main_view.getWidget(name)
+	
+	def getMainView(self):
+		return self.main_view
 		
