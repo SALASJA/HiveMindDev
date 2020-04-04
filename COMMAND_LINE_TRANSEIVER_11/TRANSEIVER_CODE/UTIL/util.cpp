@@ -104,24 +104,25 @@ void printRegisters(Nrf24 &transeiver){
 
 void process_uart_input(Nrf24 &transeiver, uint8_t * data_buffer){
 	uint8_t pipe = 0;
-	USART_Transmit('?');
-	USART_Transmit(data_buffer[0]);
-	USART_Transmit('\n');
+	//USART_Transmit('?');
+	//USART_Transmit(data_buffer[0]);
+	//USART_Transmit('\n');
 	switch(data_buffer[0]){
 		case 0: {
 				  //copy(transeiver.RX_ADDR_P_VAL[0], data_buffer + 29);
 				  transeiver.send(data_buffer + 1); //make a macro to shift
 				  while(transeiver.isSending())
 					;
+				  /*
 				  USART_Transmit('!');
 				  for(int i = 0; i < 32; i++){
 				  		USART_Transmit(data_buffer[i]);
 				  }
-				  USART_Transmit('\n');
+				  USART_Transmit('\n');*/
 				} 
 				break;
 			
-		case 1: transeiver.set_TX_address(data_buffer + 1);
+		case 1: transeiver.set_TX_address(data_buffer + 2);
 				break;
 				  
 		case 2: pipe = data_buffer[1];
@@ -172,12 +173,12 @@ void process_recieved(Nrf24 &transeiver, uint8_t * receive_buffer){
 				  if(transeiver.isSuccessMode()){
 				  	send_success(transeiver, receive_buffer + 1);
 				  }
-				  
+				  /*
 				  USART_Transmit('!');
 				  for(int i = 0; i < 32; i++){
 				  		USART_Transmit(receive_buffer[i]);
 				  }
-				  USART_Transmit('\n');
+				  USART_Transmit('\n');*/
 				  break; 
 				  
 				  
@@ -254,37 +255,36 @@ uint8_t is_success(uint8_t * receive, uint8_t * success){
 
 
 void print_success(uint8_t * buffer){
-	printf("SUCCESS:");
+	USART_Transmit(17);
+	USART_Transmit(2); //success is tagged as 2
 	for(uint8_t i = 0; i < 16; i++){
 		USART_Transmit(buffer[i]);
 	}
-	USART_Transmit('\n');
-	
 }
 
 void print_fileline(uint8_t * buffer){
-	printf("FILELINE:");
-	for(uint8_t i = 0; i < 27; i++){
+	USART_Transmit(31);
+	USART_Transmit(4);
+	for(uint8_t i = 0; i < 30; i++){
 		USART_Transmit(buffer[i]);
 	}
-	USART_Transmit('\n');
-	
 }
 
 void print_receive(uint8_t * buffer){
-	printf("RECEIVED:");
-	for(uint8_t i = 0; buffer[i] != 0; i++){
+	USART_Transmit(31);
+	USART_Transmit(0); //0 is message_receive
+	for(uint8_t i = 0; i < 30; i++){
 		USART_Transmit(buffer[i]);
 	}
-	USART_Transmit('\n');
+	//USART_Transmit('\n');
 }
 
 void print_address(uint8_t * address){
-	printf("ADDRESS:");
+	USART_Transmit(4);
+	USART_Transmit(3);
 	for(uint8_t i = 0; i < 3; i++){
 		USART_Transmit(address[i]);
 	}
-	USART_Transmit('\n');
 }
 
 void print_RX_address(Nrf24 &transeiver, uint8_t pipe){
@@ -293,20 +293,24 @@ void print_RX_address(Nrf24 &transeiver, uint8_t pipe){
 	if(2 <= pipe && pipe <= 5){
 		shift = 2;
 	}
-	printf("STATE:");
+	//printf("STATE:");
+	USART_Transmit(4); //number of bits
+	USART_Transmit(1); //type of data
 	for(uint8_t i = 0 + shift; i < 3 + shift; i++){
 		USART_Transmit(buffer[i]);
 	}
-	USART_Transmit('\n');
+	//USART_Transmit('\n');
 }
 
 void print_TX_address(Nrf24 &transeiver){
 	uint8_t * buffer = transeiver.get_TX_address();
-	printf("STATE:");
+	//printf("STATE:");
+	USART_Transmit(4);
+	USART_Transmit(1); //MAKE 1 be the value for representing states
 	for(uint8_t i = 0; i < 3; i++){
 		USART_Transmit(buffer[i]);
 	}
-	USART_Transmit('\n');
+	//USART_Transmit('\n');
 }
 
 

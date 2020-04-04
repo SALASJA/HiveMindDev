@@ -43,7 +43,7 @@ ISR(USART_RX_vect) //its a lot like a GUI event if you have worked with those, m
 	data_buffer[data_buffer_index] = receivedByte;
 	data_buffer_index++;
 	if(data_buffer_index == 32 || receivedByte == '\r'){
-			if(data_buffer[0] == '\0' && receivedByte == '\r'){
+			if(data_buffer[0] == '\0' && receivedByte == '\r'){ //forcing 32 bits
 				;
 			}
 			else{

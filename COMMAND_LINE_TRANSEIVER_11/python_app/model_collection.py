@@ -6,43 +6,129 @@ import transceiver_commands as c
 import threading
 from ctypes import c_bool
 
+
+MESSAGE = 0
+STATE = 1
+SUCCESS = 2
+ADDRESS = 3
+FILELINE = 4
+"""optimize the class so this not up here"""
+
+class CommandObject:
+	def __init__(self):
+		self.bits = bytearray(32)
+	
+	def set_USART_mode(self, mode):
+		self.bits[0] = mode
+	
+	def get_bits(self):
+		return bytes(self.bits)
+
+class StateCommandObject(CommandObject):  #the way imma read the addresses in the arduino code different now
+	
+	def set_address_pipe(self, pipe):
+		self.bits[1] = pipe
+	
+	def set_address(self, address):
+		bit_index = 2
+		for i in range(3):
+			self.bits[bit_index] = address[i]
+			bit_index += 1
+
+class TransmitCommandObject(CommandObject):
+	def set_WhenReceived_mode(self,mode):
+		self.bits[1] = mode
+		
+
+class FindCommandObject(TransmitCommandObject):
+	def set_source_address(self, address):
+		bit_index = 2
+		for i in range(3):
+			self.bits[bit_index] = address[i]
+			bit_index += 1
+	
+
+class MessageCommandObject(TransmitCommandObject):
+	def set_message_id(self,ID):
+		self.bits[2] = ID
+	
+	def set_message(self, message): #messages are now a length of 25
+		if len(message) > c.MESSAGE_LENGTH:
+			message = message[0:c.MESSAGE_LENGTH]
+		bit_index = 3
+		for i in range(len(message)):
+			self.bits[bit_index] = message[i]
+			bit_index += 1
+	
+	def set_source_address(self, address):
+		bit_index = 29
+		for i in range(3):
+			self.bits[bit_index] = address[i]
+			bit_index += 1
+	
+	
+			
+		
+
 class Command:
 	@staticmethod
 	def personal_message(ID, message, rx_address): #this might be easier to fix
-		if len(message) > c.MESSAGE_LENGTH:
-			message = message[0:c.MESSAGE_LENGTH]
-		null_byte_length = c.MESSAGE_LENGTH - len(message)
-		null_bytes = chr(0) * null_byte_length
-		bytesss = bytes(c.TRANSMIT + c.MESSAGE + ID + (c.MESSAGE_LENGTH * chr(0)) + rx_address, encoding = "utf-8")
-		#print("bytes: ", bytesss)
-		return bytesss
+		command = MessageCommandObject()
+		command.set_USART_mode(c.TRANSMIT)
+		command.set_WhenReceived_mode(c.PERSONAL_MESSAGE)
+		command.set_message_id(ID)
+		command.set_message(bytes(message, encoding = "utf-8"))
+		command.set_source_address(bytes(rx_address, encoding = "utf-8"))
+		return command.get_bits()
 		
 	@staticmethod
 	def get_TX_address():
-		return bytes(c.GET_TX_ADDRESS + c.FLUSH, encoding = "utf-8")
+		command = StateCommandObject()
+		command.set_USART_mode(c.GET_TX_ADDRESS)
+		return command.get_bits()
 	
 	@staticmethod
 	def set_TX_address(address):
-		return bytes(c.SET_TX_ADDRESS + address + c.FLUSH, encoding = "utf-8")
+		command = StateCommandObject()
+		command.set_USART_mode(c.SET_TX_ADDRESS)
+		command.set_address(bytes(address, encoding = "utf-8"))
+		return command.get_bits()
 	
 	@staticmethod
 	def get_RX_address(pipe):
-		return bytes(c.GET_RX_ADDRESS + pipe + c.FLUSH, encoding = "utf-8")
+		command = StateCommandObject()
+		command.set_USART_mode(c.GET_RX_ADDRESS)
+		command.set_address_pipe(pipe)
+		return command.get_bits()
 	
 	@staticmethod
-	def set_RX_address(address, pipe):
-		return bytes(c.SET_RX_ADDRESS + pipe + address + c.FLUSH, encoding = "utf-8")
+	def set_RX_address(pipe, address):
+		command = StateCommandObject()
+		command.set_USART_mode(c.SET_RX_ADDRESS)
+		command.set_address_pipe(pipe)
+		command.set_address(bytes(address, encoding = "utf-8"))
+		return	command.get_bits()
 	
 	@staticmethod
 	def address_return(return_address):
-		return bytes(c.TRANSMIT + c.ADDRESS_RETURN + return_address + c.FLUSH, encoding = "utf-8")
+		command = FindCommandObject()
+		command.set_USART_mode(c.TRANSMIT)
+		command.set_WhenReceived_mode(c.ADDRESS_RETURN)
+		command.set_source_address(bytes(return_address, encoding = "utf-8"))
+		return command.get_bits()
 	
 	@staticmethod
 	def file_line(ID,line,rx_address):#fix in case line is too small
-		line = bytearray(line)
-		null_byte_length = c.MESSAGE_LENGTH - len(line)
-		line = bytearray(line) + bytearray(null_byte_length)
-		return bytes( bytearray([ord(c.TRANSMIT)]) + bytearray([ord(c.FILE_LINE_SEND)]) + bytearray([ID]) + line + bytearray(rx_address, encoding = "utf-8"))
+		command = MessageCommandObject()
+		command.set_USART_mode(c.TRANSMIT)
+		command.set_WhenReceived_mode(c.FILE_LINE_SEND)
+		command.set_message_id(ID)
+		command.set_message(line)
+		command.set_source_address(bytes(rx_address, encoding = "utf-8"))
+		return command.get_bits()
+
+#add the new stuff as A seperate class and make TransceiverInterface a subclass of it
+
 		
 		
 	
@@ -71,15 +157,15 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 		self.address_queue = multiprocessing.Queue()
 		self.success_queue = multiprocessing.Queue()
 		self.file_queue = multiprocessing.Queue()
-		self.communicationProcess = multiprocessing.Process(target = TransceiverInterface.communication, args = (self,SERIAL_PORT_NAME, BAUD_RATE, self.send_queue, self.receive_queue, self.state_queue, self.address_queue, self.success_queue, self.file_queue, self.communication_process_on)) #maybe just make a new one
+		self.communicationProcess = multiprocessing.Process(target = TransceiverInterface.communication, args = (SERIAL_PORT_NAME, BAUD_RATE, self.send_queue, self.receive_queue, self.state_queue, self.address_queue, self.success_queue, self.file_queue, self.communication_process_on)) #maybe just make a new one
 		self.communicationProcess.start()
 		self.get_TX_address_from_node()
-		self.get_RX_address_from_node(chr(0))
-		self.get_RX_address_from_node(chr(1))
-		self.get_RX_address_from_node(chr(2))
-		self.get_RX_address_from_node(chr(3))
-		self.get_RX_address_from_node(chr(4))
-		self.get_RX_address_from_node(chr(5))
+		self.get_RX_address_from_node(0)
+		self.get_RX_address_from_node(1)
+		self.get_RX_address_from_node(2)
+		self.get_RX_address_from_node(3)
+		self.get_RX_address_from_node(4)
+		self.get_RX_address_from_node(5)
 		
 	
 	def stopCommunicationProcess(self):
@@ -92,7 +178,7 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 		self.send_queue.put(Command.get_TX_address())
 		start = time.monotonic()
 		while self.state_queue.empty():
-			if time.monotonic() > start + 0.25:
+			if time.monotonic() > start + 0.10:
 				self.send_queue.put(Command.get_TX_address())
 				start = time.monotonic()
 		self.tx_address = self.state_queue.get()
@@ -116,10 +202,10 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 		self.send_queue.put(Command.get_RX_address(pipe))
 		start = time.monotonic()
 		while self.state_queue.empty() :
-			if time.monotonic() > start + 0.25:
+			if time.monotonic() > start + 0.10:
 				self.send_queue.put(Command.get_RX_address(pipe))
 				start = time.monotonic()
-		self.rx_address[ord(pipe)] = self.state_queue.get()
+		self.rx_address[pipe] = self.state_queue.get()
 		
 		while not self.state_queue.empty():
 			self.state_queue.get()
@@ -132,62 +218,70 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 		self.send_queue.put(Command.set_RX_address(address, pipe))
 		self.get_RX_address_from_node(pipe)
 	
-	
+	#its now function just need to add stuff
 	@staticmethod
-	def communication(obj, SERIAL_PORT_NAME, BAUD_RATE,send_queue, receive_queue, state_queue, address_queue, success_queue, file_queue, process_on):         #gets the receiving messages in a parallel process # this gets put under cases
-		#byte_buffer = bytes(32)
+	def communication(SERIAL_PORT_NAME, BAUD_RATE, send_queue, receive_queue, state_queue, address_queue, success_queue, file_queue, process_on):         #gets the receiving messages in a parallel process # this gets put under cases
 		ser = None
 		process_on.value = True
 		try:
-			ser = serial.Serial(SERIAL_PORT_NAME, BAUD_RATE, timeout = 0.10)
+			ser = serial.Serial(SERIAL_PORT_NAME, BAUD_RATE, timeout = 0)
 			while process_on.value:                   #maybe to improve reliability put them in seperate queues
-				reading = ser.readline() #brrrreeeeaaaks here
-				chunk_type = None
+				data = TransceiverInterface.get_data(ser)		
+				type = TransceiverInterface.get_type(data)
+			
+				if type == MESSAGE:
+					receive_queue.put(data[1:].decode())
+					
+				elif type == STATE:
+					print("hmmmm", data[1:].decode())
+					state_queue.put(data[1:].decode())
+					
+				elif type == SUCCESS:
+					success_queue.put(data[1:].decode())
+					
+				elif type == ADDRESS:
+					print("ADDRESS:", data[1:])
+					
+				elif type == FILELINE:
+					print("FILELINE:",data[1:])
 				
-				if len(reading) > 0:
-					#print(str(reading))
-					try:
-						chunk_type = reading[0:reading.index(ord(':'))].decode()
-					except:
-						chunk_type = None
-					
-					
-				if chunk_type == "ADDRESS":
-					reading = obj.formatReceivedMessage(reading)    #should use obj instead since self makes it misleading
-					address_queue.put(reading)
-					
-				elif chunk_type == "STATE":
-					reading = obj.formatReceivedMessage(reading)
-					state_queue.put(reading)
-					
-				elif chunk_type == "RECEIVED":
-					reading = obj.formatReceivedMessage(reading)
-					receive_queue.put(reading)
-					
-				elif chunk_type == "SUCCESS":
-					reading = obj.formatReceivedMessage(reading)
-					success_queue.put(reading)
-					continue
-				elif chunk_type == "FILELINE":
-					print("hmmmmmmmm:",reading[reading.index(ord(':')) + 1: len(reading) - 1])
-					file_queue.put(reading[reading.index(ord(':')) + 1: len(reading) - 1])
+			
+				if not send_queue.empty():
+					bits = send_queue.get()
+					#print("BITSEND: ", bits)
+					ser.write(bits)
 				
-				if(not send_queue.empty()):
-					hmm = send_queue.get()
-					#print("python:",hmm)
-					ser.write(hmm)
-					
-				#if "b''" == original:
-				#	continue
-				#print("\r" + reading + (" " * 50) + "\n")
-				#print("\nEnter a message to write:",end="")
 		except Exception as e:
-			print(e)
+			print("ERROR: ", e)
 		finally:
 			ser.close()
-		
-			
-	def formatReceivedMessage(self, message):
+	
+	@staticmethod
+	def get_data(ser):
+		data = bytearray()
+		byte = ser.read()
+
+		if len(byte) > 0:
+			length = byte[0]
+			i = 0
+			while i < length:
+				byte = ser.read()
+				if len(byte) > 0:
+					data.append(byte[0])
+					i = i + 1
+		return data
+	
+	@staticmethod
+	def get_type(data):
+		type = None
+		if len(data) > 0:
+			type = data[0]
+		return type
+	
+	
+	
+	@staticmethod
+	def formatReceivedMessage(message):
 		l = message.index(ord(':')) + 1
 		message = message[l : len(message) - 1]
 		copy_of_message = message
@@ -334,7 +428,7 @@ class MasterTransceiverInterface(TransceiverInterface):
 		
 	def sendMessage(self, chunks):  # this will work by threads
 		for ID in range(len(chunks)): ####error here because adding extra bytes by mistake
-			if not self.transmit(Command.personal_message(str(ID), chunks[ID], self.rx_address[0])):
+			if not self.transmit(Command.personal_message(ID, chunks[ID], self.rx_address[0])):
 				return False #print failed if false
 		return True
 	
@@ -423,7 +517,7 @@ class MasterTransceiverInterface(TransceiverInterface):
 	
 		
 	def transmit(self, command): #this has a protocol to retransmit if fails through, yap I know its not using autoack
-		if command[0] != ord(c.TRANSMIT):
+		if command[0] != c.TRANSMIT:
 			return
 			
 		self.send_queue.put(command)
