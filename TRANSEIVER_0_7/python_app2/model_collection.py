@@ -6,11 +6,11 @@ import glob
 import logging
 import logging.handlers
 from datetime import date
-
+"""
 LOG = open('log.txt','w')
 today = date.today()
 print(today,file = LOG)
-LOG.flush()
+LOG.flush()"""
 class Network:
 	def __init__(self):
 		self.transceiver = TransceiverInterface()
@@ -88,8 +88,8 @@ class Network:
 	"""
 	
 	def send(self):
-		print(message,file = LOG)
-		LOG.flush()
+		"""print(message,file = LOG)
+		LOG.flush()"""
 		if self.message_last_sent == "":
 			self.message_last_sent = str(self.message_number)
 			
@@ -139,8 +139,8 @@ class Network:
 	def receive(self):
 		message = self.transceiver.receivePersonalMessage()
 			
-		print(message,file = LOG)
-		LOG.flush()
+		"""print(message,file = LOG)
+		LOG.flush()"""
 		
 		if message != None  and "\\x" not in message and message != "" and message != "\n":
 				

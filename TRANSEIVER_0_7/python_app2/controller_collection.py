@@ -37,8 +37,11 @@ class Controller:
 		AddConnectionController(add_connection_view, self.model)
 		
 	def open_history(self):
-		history_view = self.view.getHistoryView()
-		history_view.show()
+		add_history_view = self.view.getHistoryView()
+		add_history_view.show()
+		add_history_view.setMainView(self.view)
+		HistoryController(add_history_view, self.model)
+		
 	
 	def add_connection(self):
 		add_connection_window = tk.Toplevel()
@@ -51,7 +54,19 @@ class Controller:
 	
 		
 
-
+class HistoryController:
+	def __init__(self,view, model):
+		self.view = view
+		self.model = model
+		self.set_events()
+		
+	def set_events(self):
+		history_label = self.view.getWidget("history_label")
+		history_label["command"] = self.__updatePortList
+		
+		
+		
+		
 class SettingsController:
 	def __init__(self,view, model):
 		self.view = view

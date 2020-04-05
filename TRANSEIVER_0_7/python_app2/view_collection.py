@@ -74,6 +74,16 @@ class MainView:
 		submenu.add_command(label = "Add Connection")
 		submenu.add_command(label = "History")
 	
+	def textLabel(self,window):
+		f = open("log.txt")
+		data = f.read()
+		f.close()
+		label = tk.Label(frame, text=data)
+		self.widgets["history_frame"] = frame
+	def constructHistoryLabel(self,window):
+		frame = tk.Frame(window)
+		self.widgets["history_frame"]=frame
+		
 	def constructNoConnectionLabel(self,window):
 		frame = tk.Frame(window)
 		self.widgets["connections_frame"] = frame
@@ -616,8 +626,8 @@ class HistoryView:
 		toplevel_history_window.withdraw()
 		toplevel_history_window.protocol('WM_DELETE_WINDOW', self.hide)
 		self.main_view = None
-			
-		
+		self.construct_view()
+	
 	
 	def hide(self):
 		toplevel_history_window = self.widgets["toplevel_history_window"]
@@ -641,4 +651,41 @@ class HistoryView:
 	
 	def getMainView(self):
 		return self.main_view
+		
+	def construct_view(self):
+		toplevel_history_window = self.widgets["toplevel_history_window"]
+		tab_parent = ttk.Notebook(toplevel_history_window)
+		self.widgets["notebook"] = tab_parent
+		
+		self.construct_history_tab(tab_parent)
+		
+		tab_parent.pack(expand=1, fill='both')
+		
+	def construct_history_tab(self, tab_parent):
+		tab = ttk.Frame(tab_parent)
+		self.widgets["Serial_port_connections_tab"] = tab
+		tab_parent.add(tab, text="History")
+		self.__constructHistoryFrame(tab)
+		
+	def __constructHistoryFrame(self, tab):
+		serial_port_frame = tk.Frame(tab)
+		self.widgets["serial_port_frame"] = serial_port_frame
+		self.__constructHistoryLogFrame(serial_port_frame)
+		serial_port_frame.pack()
+	
+	def __constructHistoryLogFrame(self, serial_port_frame):
+		serial_port_select_frame = tk.Frame(serial_port_frame)
+		self.widgets["serial_port_select_frame"] = serial_port_select_frame
+		self.__constructLogs(serial_port_select_frame)
+		serial_port_select_frame.pack()
+		
+	def __constructLogs(self, toplevel_history_window):
+		f= open("log.txt")
+		data = f.read()
+		f.close()
+		historyLabel = tk.Label(toplevel_history_window, text = data)
+		self.widgets["history_label"] = historyLabel
+		historyLabel.pack(side = tk.LEFT)
+		
+	
 		
