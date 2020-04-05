@@ -178,7 +178,7 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 		self.send_queue.put(Command.get_TX_address())
 		start = time.monotonic()
 		while self.state_queue.empty():
-			if time.monotonic() > start + 0.10:
+			if time.monotonic() > start + 0.30:
 				self.send_queue.put(Command.get_TX_address())
 				start = time.monotonic()
 		self.tx_address = self.state_queue.get()
@@ -202,7 +202,7 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 		self.send_queue.put(Command.get_RX_address(pipe))
 		start = time.monotonic()
 		while self.state_queue.empty() :
-			if time.monotonic() > start + 0.10:
+			if time.monotonic() > start + 0.30:
 				self.send_queue.put(Command.get_RX_address(pipe))
 				start = time.monotonic()
 		self.rx_address[pipe] = self.state_queue.get()
@@ -228,9 +228,10 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 			while process_on.value:                   #maybe to improve reliability put them in seperate queues
 				data = TransceiverInterface.get_data(ser)		
 				type = TransceiverInterface.get_type(data)
-			
+					
 				if type == MESSAGE:
-					receive_queue.put(data[1:].decode())
+					print("MESSAGE: ", data[1:])
+					receive_queue.put(data[1:])
 					
 				elif type == STATE:
 					print("hmmmm", data[1:].decode())
@@ -244,6 +245,7 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 					
 				elif type == FILELINE:
 					print("FILELINE:",data[1:])
+					file_queue.put(data[1:len(data) - 3]) #i have to modify this too but just gonna make messages work again then will optimize
 				
 			
 				if not send_queue.empty():
@@ -263,10 +265,12 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 
 		if len(byte) > 0:
 			length = byte[0]
+			#print("byte: ", byte)
 			i = 0
 			while i < length:
 				byte = ser.read()
 				if len(byte) > 0:
+					#print("byte: ", byte)
 					data.append(byte[0])
 					i = i + 1
 		return data
@@ -409,6 +413,7 @@ class MasterTransceiverInterface(TransceiverInterface):
 		data = file.read()
 		chunks = util.fileChunks(data,c.MESSAGE_LENGTH)
 		filename = bytes(filename,encoding = "utf-8")
+		info_chunk = [chr(2),len(chunks)
 		chunks.insert(0,filename)
 		self.file_transmit_queue.append(chunks)
 		
@@ -423,13 +428,20 @@ class MasterTransceiverInterface(TransceiverInterface):
 			sent_message += " " * len(self.rx_address[0]) + "\t" + chunks[i]  + "\n"
 		self.pending_message_queue.append(sent_message)
 		
-		chunks.append(chr(0))
+		chunks.insert(0,chr(len(chunks)))
 		self.transmit_queue.append(chunks)
 		
 	def sendMessage(self, chunks):  # this will work by threads
-		for ID in range(len(chunks)): ####error here because adding extra bytes by mistake
-			if not self.transmit(Command.personal_message(ID, chunks[ID], self.rx_address[0])):
-				return False #print failed if false
+		STATE_ID = False
+		for i in range(len(chunks)): ####error here because adding extra bytes by mistake
+			if i == 0:
+				if not self.transmit(Command.personal_message(2, chunks[i], self.rx_address[0])):
+					return False #print failed if false
+			else:
+				if not self.transmit(Command.personal_message(int(STATE_ID), chunks[i], self.rx_address[0])):
+					return False #print failed if false
+				STATE_ID = not STATE_ID
+				
 		return True
 	
 	def sendFile(self,chunks):
@@ -453,21 +465,40 @@ class MasterTransceiverInterface(TransceiverInterface):
 	
 	def __receiveThread(self):
 		self.receiving_thread_on = True  #this can be grouped and chunked into message classes
+		amount = 0
+		length = 0
+		chunks = []
 		while self.receiving_thread_on:
 			message = self.receive()
 			if message != None:
-				ID = int(message[0])
-				if ID == 0:
-					personal_message_chunk = message[1:]
-				elif len(message) != 1:
-					personal_message_chunk = " " * 3 + "\t" + message[1:]
+				ID = message[0]
+				text_message = ""
+				
+				i = 1
+				while message[i] != 0:
+					text_message += chr(message[i])
+					i = i + 1
+				
+				if ID == 2:
+					length = message[1]
+				elif ID == 0 and len(chunks) % 2 == 0 and length != 0 and len(chunks) == 0:
+					chunks.append(text_message)
+					amount += 1
+				elif ID == 0 and len(chunks) % 2 == 0 and length != 0 and len(chunks) > 0:
+					chunks.append(" " * 3 + "\t" + text_message)
+					amount += 1
+				elif ID == 1 and len(chunks) % 2 == 1 and length != 0:
+					chunks.append(" " * 3 + "\t" + text_message)
+					amount += 1
+				
+				if amount == length:
+					self.text_display.write("\n".join(chunks))
+					chunks.clear()
+					amount = 0
+					length = 0
 					
-				if len(message) > 1 and ID > len(self.receive_messages_queue) - 1:
-					self.receive_messages_queue.append(personal_message_chunk)
 					
-				elif len(message) == 1 and len(self.receive_messages_queue) != 0:
-					self.text_display.write("\n".join(self.receive_messages_queue))
-					self.receive_messages_queue.clear()
+
 	
 	def __fileSendThread(self):
 		self.file_sending_thread_on = True
