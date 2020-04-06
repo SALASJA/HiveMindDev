@@ -221,6 +221,7 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 	#its now function just need to add stuff
 	@staticmethod
 	def communication(SERIAL_PORT_NAME, BAUD_RATE, send_queue, receive_queue, state_queue, address_queue, success_queue, file_queue, process_on):         #gets the receiving messages in a parallel process # this gets put under cases
+		start_time = time.monotonic()
 		ser = None
 		process_on.value = True
 		try:
@@ -230,7 +231,7 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 				type = TransceiverInterface.get_type(data)
 					
 				if type == MESSAGE:
-					print("MESSAGE: ", data[1:])
+					print("MESSAGE: ", data[1:], "   time: ", time.monotonic() - start_time)
 					receive_queue.put(data[1:])
 					
 				elif type == STATE:
@@ -244,7 +245,7 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 					print("ADDRESS:", data[1:])
 					
 				elif type == FILELINE:
-					print("FILELINE:",data[1:])
+					#print("FILELINE:",data[1:])
 					file_queue.put(data[1:len(data) - 3]) #i have to modify this too but just gonna make messages work again then will optimize
 				
 			
@@ -412,10 +413,15 @@ class MasterTransceiverInterface(TransceiverInterface):
 		file = open(filename, "rb")
 		data = file.read()
 		chunks = util.fileChunks(data,c.MESSAGE_LENGTH)
-		filename = bytes(filename,encoding = "utf-8")
-		info_chunk = [chr(2),len(chunks)
-		chunks.insert(0,filename)
+		if len(chunks) > 33038209969: #max file size send allowed 100 GB
+			print("File too big")
+		
+		filename = bytearray(bytes(filename,encoding = "utf-8"))
+		length = util.get_length_bytes(len(chunks))
+		info_chunk = bytearray(length) + filename
+		chunks.insert(0,info_chunk)
 		self.file_transmit_queue.append(chunks)
+				
 		
 	def load(self, message,addresses = ["\x00!!"]): #can compartamentalize into a message class
 		#need to make a base case
@@ -445,9 +451,15 @@ class MasterTransceiverInterface(TransceiverInterface):
 		return True
 	
 	def sendFile(self,chunks):
-		for ID in range(len(chunks)): #error here too
-			if not self.transmit(Command.file_line(ID,chunks[ID], self.rx_address[0])):
-				return False
+		STATE_ID = False
+		for i in range(len(chunks)): #error here too
+			if i == 0:
+				if not self.transmit(Command.file_line(2, chunks[i], self.rx_address[0])):
+					return False
+			else:
+				if not self.transmit(Command.file_line(int(STATE_ID),chunks[i], self.rx_address[0])):
+					return False
+				STATE_ID = not STATE_ID
 		return True
 	
 	def __sendThread(self):
@@ -506,7 +518,7 @@ class MasterTransceiverInterface(TransceiverInterface):
 			if len(self.file_transmit_queue) > 0: 
 				address = self.pending_file_addresses_queue.pop(0)
 				chunks = self.file_transmit_queue.pop(0)
-				filename = chunks[0].decode()
+				filename = chunks[0][5:].decode()
 				self.set_TX_address(address)
 				if not self.sendFile(chunks):
 					self.text_display.write(" " * 3 + "\t" + "<<<<<" + filename + " FAILED>>>>>>")
@@ -515,28 +527,50 @@ class MasterTransceiverInterface(TransceiverInterface):
 	
 	def __fileReceiveThread(self):
 		self.file_receiving_thread_on = True  #this can be grouped and chunked into message classes
+		filename = None
+		amount = 0
+		length = 0
+		chunks = []
 		while self.file_receiving_thread_on:
 			file_line = self.file_line_receive()
-			if file_line != None and len(file_line) > 0:
-				file_line = bytearray(file_line)
-				print("\n\nFILE RECEIVED: ", file_line)
+			if file_line != None:
 				ID = file_line[0]
-				file_line_bytes = file_line[1:]
-				if ID == 0:
-					self.receive_file_queue.append(file_line_bytes.decode())
+				data = file_line[1:]
+			
+				if ID == 2:
+					length_bytes = data[0:5]
+					length = util.get_amount(length_bytes) #call this get length soon
+					name_bytes = data[5:]
+					name = ""
+					i = 0
+					while name_bytes[i] != 0:
+						name += chr(name_bytes[i])
+						i = i + 1
+				
+					filename = name
 					
-				if len(file_line) > 1 and ID > len(self.receive_file_queue) - 1:
-					self.receive_file_queue.append(file_line_bytes)
-					
-				elif len(file_line) == 1 and len(self.receive_file_queue) != 0:
-					file = open("received_" + self.receive_file_queue[0],"wb")
-					file_bytes = self.receive_file_queue[1]
-					for i in range(2, len(self.receive_file_queue)):
-						file_bytes += self.receive_file_queue[i]
-					file.write(bytes(file_bytes))
+				elif ID == 0 and len(chunks) % 2 == 0 and length != 0:
+					chunks.append(bytearray(data))
+					amount += 1
+					print("ID0:",ID,"amount: ", amount, "\tlength: ",  length, "\tpercentage: ", amount/length * 100)
+				elif ID == 1 and len(chunks) % 2 == 1 and length != 0:
+					chunks.append(bytearray(data))
+					amount += 1
+					print("ID1:",ID,"amount: ", amount, "\tlength: ",  length, "\tpercentage: ", amount/length * 100)
+			
+				if amount == length:
+					total_data = bytearray()
+					for byte_arrays in chunks:
+						total_data += byte_arrays
+					file = open("received_" + filename,"wb")
+					file.write(total_data)
 					file.close()
-					
-					self.receive_file_queue.clear()
+					print("file_written***********************")
+					chunks.clear()
+					amount = 0
+					length = 0
+				
+				
 				
 					
 			

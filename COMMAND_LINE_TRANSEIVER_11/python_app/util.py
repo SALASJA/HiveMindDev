@@ -37,6 +37,27 @@ def fileChunks(data, chunk_length):
 		chunks.append(last_chunk)
 	
 	return chunks
-	
+
+def get_length_bytes(num):
+	size = bytearray()
+	i = 4
+	while i >= 0:
+		multiple = num // (255 ** i)
+		if multiple > 0:
+			size.insert(0,multiple)
+		else:
+			size.insert(0,0)
+		num = num % (255 ** i)
+		i = i - 1
+	return size
+
+def get_amount(length_bytes):
+	total = 0
+	i = 0 
+	for byte in length_bytes:
+		total += byte * 255 ** i
+		i = i + 1
+	return total
+		
 
 
