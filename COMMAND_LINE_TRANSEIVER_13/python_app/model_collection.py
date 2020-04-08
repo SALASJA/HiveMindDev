@@ -245,8 +245,8 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 					print("ADDRESS:", data[1:])
 					
 				elif type == FILELINE:
-					#print("FILELINE:",data[1:])
-					file_queue.put(data[1:len(data) - 3]) #i have to modify this too but just gonna make messages work again then will optimize
+					print("FILELINE:",data[1:])
+					file_queue.put(data[1:]) #i have to modify this too but just gonna make messages work again then will optimize
 				
 			
 				if not send_queue.empty():
@@ -388,6 +388,74 @@ class PendingFile:
 	
 	def get_target_address(self):
 		return self.target_address
+
+class ReceivingMessage:
+	def __init__(self, amount):
+		self.chunks = []
+		self.amount = amount
+		self.current_amount = 0
+		
+	def add_chunk(self, chunk):
+		ID = chunk[2]
+		message_bytes = chunk[3:29]
+		
+		text_message = ""
+		
+		i = 0
+		while i < len(message_bytes) and message_bytes[i] != 0:
+			text_message += chr(message_bytes[i])
+			i = i + 1
+		
+		print("text_message: ", text_message)
+			
+		if ID == 0 and len(self.chunks) % 2 == 0  and len(self.chunks) == 0:
+			self.chunks.append(text_message)
+			self.current_amount += 1
+		elif ID == 0 and len(self.chunks) % 2 == 0  and len(self.chunks) > 0:
+			self.chunks.append(" " * 3 + "\t" + text_message)
+			self.current_amount += 1
+		elif ID == 1 and len(self.chunks) % 2 == 1:
+			self.chunks.append(" " * 3 + "\t" + text_message)
+			self.current_amount += 1
+	
+	def is_complete(self):
+		return self.current_amount == self.amount
+	
+	def get_message(self):
+		return "\n".join(self.chunks)
+
+class ReceivingFile:
+	def __init__(self,amount, filename):
+		self.amount = amount
+		self.current_amount = 0
+		self.filename = filename
+		self.chunks = []
+
+	def add_chunk(self, chunk):
+		ID = chunk[2]
+		data = chunk[3:29]
+		if ID == 0 and len(self.chunks) % 2 == 0:
+			self.chunks.append(bytearray(data))
+			self.current_amount += 1
+			print("ID0:",ID,"amount: ", self.current_amount, "\tlength: ",  self.amount, "\tpercentage: ", self.current_amount/self.amount * 100)
+		elif ID == 1 and len(self.chunks) % 2 == 1:
+			self.chunks.append(bytearray(data))
+			self.current_amount += 1
+			print("ID1:",ID,"amount: ", self.current_amount, "\tlength: ",  self.amount, "\tpercentage: ", self.current_amount/self.amount * 100)
+	
+	def is_complete(self):
+		return self.current_amount == self.amount
+	
+	def get_filename(self):
+		return self.filename
+	
+	def get_bytes(self):
+		filebytes = bytearray()
+		for chunk in self.chunks:
+			filebytes += chunk
+		return filebytes
+		
+		
 		
 		
 		
@@ -404,6 +472,8 @@ class MasterTransceiverInterface(TransceiverInterface):
 		
 		self.pending_message_objects = []   # this will replace some if the lists
 		self.pending_file_objects = []
+		self.receiving_message_objects = dict()
+		self.receiving_file_objects = dict()
 		
 		self.text_display = TextDisplayWrapper()   #have it by default be print in a different way
 		
@@ -468,6 +538,8 @@ class MasterTransceiverInterface(TransceiverInterface):
 	def load(self, message,addresses = ["\x00!!"]): #can compartamentalize into a message class
 		self.pending_message_objects.append(PendingMessage(message, self.rx_address[0], addresses))
 		
+		
+		
 	def sendMessage(self, chunks):  #this will work by threads
 		STATE_ID = False
 		for i in range(len(chunks)): ####error here because adding extra bytes by mistake
@@ -478,8 +550,8 @@ class MasterTransceiverInterface(TransceiverInterface):
 				if not self.transmit(Command.personal_message(int(STATE_ID), chunks[i], self.rx_address[0])):
 					return False #print failed if false
 				STATE_ID = not STATE_ID
-				
 		return True
+		
 	
 	def sendFile(self,chunks):
 		STATE_ID = False
@@ -492,6 +564,7 @@ class MasterTransceiverInterface(TransceiverInterface):
 					return False
 				STATE_ID = not STATE_ID
 		return True
+		
 	
 	def __sendThread(self):
 		self.sending_thread_on = True
@@ -506,40 +579,33 @@ class MasterTransceiverInterface(TransceiverInterface):
 					if not self.sendMessage(chunks):
 						message += address + "\t" + "<"* 6 + "FAILED" + ">" * 6 + "\n"
 				self.text_display.write(message)
+				
 	
 	def __receiveThread(self):
 		self.receiving_thread_on = True  #this can be grouped and chunked into message classes
-		amount = 0
-		length = 0
-		chunks = []
 		while self.receiving_thread_on:
 			message = self.receive()
 			if message != None:
-				ID = message[0]
-				text_message = ""
-				
-				i = 1
-				while message[i] != 0:
-					text_message += chr(message[i])
-					i = i + 1
+				ID = message[2]
+				address = message[29:].decode() #only acceptable addresses allowed?
 				
 				if ID == 2:
-					length = message[1]
-				elif ID == 0 and len(chunks) % 2 == 0 and length != 0 and len(chunks) == 0:
-					chunks.append(text_message)
-					amount += 1
-				elif ID == 0 and len(chunks) % 2 == 0 and length != 0 and len(chunks) > 0:
-					chunks.append(" " * 3 + "\t" + text_message)
-					amount += 1
-				elif ID == 1 and len(chunks) % 2 == 1 and length != 0:
-					chunks.append(" " * 3 + "\t" + text_message)
-					amount += 1
+					amount = message[3]
+					self.receiving_message_objects[address] = ReceivingMessage(amount)
+				else:
+					self.receiving_message_objects[address].add_chunk(message)
+					
+
+				addresses_to_remove = []
+				for address in self.receiving_message_objects:
+					receiving_message_object = self.receiving_message_objects[address]
+					if receiving_message_object.is_complete():
+						self.text_display.write(receiving_message_object.get_message())
+						addresses_to_remove.append(address)
 				
-				if amount == length:
-					self.text_display.write("\n".join(chunks))
-					chunks.clear()
-					amount = 0
-					length = 0
+				for address in addresses_to_remove:
+					del self.receiving_message_objects[address]
+						
 					
 					
 
@@ -560,49 +626,43 @@ class MasterTransceiverInterface(TransceiverInterface):
 	
 	def __fileReceiveThread(self):
 		self.file_receiving_thread_on = True  #this can be grouped and chunked into message classes
-		filename = None
-		amount = 0
-		length = 0
-		chunks = []
 		while self.file_receiving_thread_on:
 			file_line = self.file_line_receive()
 			if file_line != None:
-				ID = file_line[0]
-				data = file_line[1:]
-			
+				ID = file_line[2]
+				data = file_line[3:29]
+				address = file_line[29:].decode()
 				if ID == 2:
 					length_bytes = data[0:5]
 					length = util.get_amount(length_bytes) #call this get length soon
 					name_bytes = data[5:]
-					print("data:", data)
 					name = ""
 					i = 0
-					while i < len(name_bytes) and name_bytes[i] != 0:
+					while name_bytes[i] != 0:
 						name += chr(name_bytes[i])
 						i = i + 1
 				
 					filename = name
+					self.receiving_file_objects[address] = ReceivingFile(length,filename)
+				else:
+					self.receiving_file_objects[address].add_chunk(file_line)
 					
-				elif ID == 0 and len(chunks) % 2 == 0 and length != 0:
-					chunks.append(bytearray(data))
-					amount += 1
-					print("ID0:",ID,"amount: ", amount, "\tlength: ",  length, "\tpercentage: ", amount/length * 100)
-				elif ID == 1 and len(chunks) % 2 == 1 and length != 0:
-					chunks.append(bytearray(data))
-					amount += 1
-					print("ID1:",ID,"amount: ", amount, "\tlength: ",  length, "\tpercentage: ", amount/length * 100)
-			
-				if amount == length:
-					total_data = bytearray()
-					for byte_arrays in chunks:
-						total_data += byte_arrays
-					file = open("received_" + filename,"wb")
-					file.write(total_data)
-					file.close()
-					print("file_written***********************")
-					chunks.clear()
-					amount = 0
-					length = 0
+				addresses_to_remove = []
+				for address in self.receiving_file_objects:
+					receiving_file_object = self.receiving_file_objects[address]
+					if receiving_file_object.is_complete():
+						filename = receiving_file_object.get_filename()
+						file = open("received_" + filename, "wb")
+						filebytes = receiving_file_object.get_bytes()
+						file.write(filebytes)
+						file.close()
+						print("file_written***********************")
+						addresses_to_remove.append(address)
+				
+				
+				for address in addresses_to_remove:
+					del self.receiving_file_objects[address]
+
 				
 				
 				

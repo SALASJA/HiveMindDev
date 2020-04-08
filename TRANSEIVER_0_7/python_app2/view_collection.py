@@ -17,7 +17,7 @@ class MainView:
 		self.settingsView = SettingsView(tk.Toplevel(parent))
 		self.addConnectionView = AddConnectionView(tk.Toplevel(parent))
 		self.messageView = MessageView(tk.Toplevel(parent)) #xhiding it
-		 #maybe just make it automatically hide within the view class
+		#maybe just make it automatically hide within the view class
 		
 	def getWidget(self, widget_name):
 		return self.widgets[widget_name]
