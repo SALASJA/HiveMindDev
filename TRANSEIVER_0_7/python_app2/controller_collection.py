@@ -4,7 +4,12 @@ from functools import partial
 import threading
 import glob
 
+'''
+Collection of controllers for HiveMind
+
+'''
 class Controller:
+        # default constructor for controller
 	def __init__(self, view, model):
 		self.view = view
 		self.model = model
@@ -13,9 +18,9 @@ class Controller:
 		self.set_events()
 	
 	def construct_subcontrollers(self):
-		settings_view = self.view.getSettingsView()
-		settings_view.setMainView(self.view)
-		SettingsController(settings_view, self.model)
+		settings_view = self.view.getSettingsView() # MainView function
+		settings_view.setMainView(self.view) # SettingsView function
+		SettingsController(settings_view, self.model) #
 		
 	def set_events(self):
 		dropmenu = self.view.getWidget("Application_dropmenu")
@@ -271,31 +276,6 @@ class MessageController:
 			lock.release()
 			self.model.setMessageLastSent("")
 		
-		
-		
-			
-		
-		
-		
-		
-	"""
-	def __send_message(self):
-		message_input = self.view.getWidget("entry")#"message_input")
-		message = message_input.get("1.0",tk.END)
-		message = message.strip()
-		node_list = self.view.getNodeList() #must load addresses as well onto model to make this affective
-		addresses = []
-		for node in node_list:
-			var = node[0]
-			if var.get() == 1:
-				addresses.append(node[1]["text"])
-		
-		self.model.load_addresses(addresses)
-		#self.model.setSendingAddress(address)
-		self.model.load(message)
-		self.__sending()
-	"""
-	
 	def __sending(self):
 		text_widget = self.view.getWidget("text_widget")
 		window = self.view.getWidget("window")

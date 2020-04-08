@@ -13,6 +13,7 @@ class MainView:
 		self.connection_canvas_created = False
 		self.connection_canvas_hiding = False
 		
+		
 		self.connectionViews = dict()
 		self.settingsView = SettingsView(tk.Toplevel(parent))
 		self.addConnectionView = AddConnectionView(tk.Toplevel(parent))
