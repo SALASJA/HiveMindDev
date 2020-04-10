@@ -31,17 +31,19 @@
 #define PinOnOffRegister PORTB
 #define PinStateRegister PINB
 
+#define SCK_Pin 5
 #define MISO_Pin 4
 #define MOSI_Pin 3
-#define SCK_Pin 5
-#define CSN_Pin 1
 #define CE_Pin 2
+#define CSN_Pin 1
 
+// SCK output   will change to pin 13 on PB5atmega328p
 // MISO input   will change to pin 12    PB4
 // MOSI output  will change to pin 11    PB3
-// SCK output   will change to pin 13 on PB5atmega328p
-// CSN output   will change to pin 10    PB2
-// CE output    will change to pin 9     PB1
+// CE output    will change to pin 10     PB1    
+
+// CSN output   will change to pin 9    PB2    
+
 
 void standardSPIPinInit();
 
