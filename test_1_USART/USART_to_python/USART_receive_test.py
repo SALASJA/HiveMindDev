@@ -7,7 +7,7 @@ def main():
 	* <--- uses of regular expressions in cases of more
 	than one connection
 	"""
-	ports = glob.glob("/dev/tty.wchusbserial*")
+	ports = glob.glob("/dev/tty.wchusbserial*") + glob.glob("/dev/tty.usbserial*") + glob.glob("COM3") + glob.glob("COM4")
 	BAUDRATE = 9600
 	choice = int(input((str(ports) + " enter numerical index for port: ")))
 	portname = ports[choice]
