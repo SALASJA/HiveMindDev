@@ -1,6 +1,6 @@
 import serial
 import glob
-import time
+
 def main():
 	"""
 	under my mac /dev/tty.wchusbserial1410 is the port
@@ -14,14 +14,28 @@ def main():
 	port = None
 	try:
 		port = serial.Serial(portname, BAUDRATE, timeout = 0)
-		byte = bytearray([1]) #can pass a byte array directly as well, this is the only way it can work
 		while True:
-			port.write(byte) #sending a 1 to microcontroller
-			time.sleep(1) #waiting one second before sending again
-			
+			byteslist = get_byte_group(port)
+			if len(byteslist) != 0: #successful transmission if positive bytes, must check because sometimes empty
+				print("RECEIVED BYTES: ", byteslist)
 	except Exception as e:
 		print("ERROR:", e)
 	finally:
 		if port != None:
 			port.close()
+
+
+def get_byte_group(port):
+	byte = port.read()
+	byteslist = bytearray()
+	if len(byte) > 0:
+		length = byte[0]
+		i = 0
+		while i < length:
+			byte = port.read()
+			if len(byte) > 0:
+				byteslist.append(byte[0])
+				i = i + 1
+	return byteslist
+	
 main()

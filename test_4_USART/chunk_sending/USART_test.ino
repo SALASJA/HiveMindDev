@@ -13,10 +13,12 @@ extern "C"{
 #define TRUE 1
 #define FALSE 0
 
+uint8_t i = 0;
+
 void setup(){
 	USART_Init(); //sets up USART registers
-	DDRB |= 1 << 5; //sets arduino pin 13 to output 
-	sei();
+	DDRB |= 1 << 5; //sets arduino pin 13 to output
+	sei(); //sets nano to prepare for interrupt
 }
 
 void loop(){
@@ -26,11 +28,13 @@ void loop(){
 ISR(USART_RX_vect){
 	uint8_t receivedByte;
 	receivedByte = (uint8_t) USART_Receive();
-	if(receivedByte == 1){
+	i++;
+	if(i == 32){
 		PORTB ^= 1 << 5; //toggles pin 13 
+		i = 0;
 	}
-	sei();
+	sei(); //sets nano to prepare for interrupt again
 }
 
-//receiving a byte from serial port, any programming language can send into the port
+//receiving 32 bytes from serial port, any programming language can send into the port
 //in this case will be using python

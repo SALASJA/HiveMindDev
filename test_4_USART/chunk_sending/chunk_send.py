@@ -14,9 +14,8 @@ def main():
 	port = None
 	try:
 		port = serial.Serial(portname, BAUDRATE, timeout = 0)
-		byte = bytearray([1]) #can pass a byte array directly as well, this is the only way it can work
 		while True:
-			port.write(byte) #sending a 1 to microcontroller
+			port.write(bytes(32)) #sending 32 bytes
 			time.sleep(1) #waiting one second before sending again
 			
 	except Exception as e:

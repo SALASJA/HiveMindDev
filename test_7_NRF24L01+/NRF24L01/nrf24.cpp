@@ -6,6 +6,7 @@ Nrf24::Nrf24(){
 }
 
 void Nrf24::init(){
+		//hmmmmmm
 		standardSPIPinInit();
 		set_CE(LOW);
 		set_CSN(HIGH);

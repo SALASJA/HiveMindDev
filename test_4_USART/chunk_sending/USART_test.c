@@ -16,9 +16,11 @@
 #define TRUE 1
 #define FALSE 0
 
+uint8_t i = 0;
+
 void main(){
 	USART_Init(); //sets up USART registers
-	DDRB |= 1 << 5; //sets arduino pin 13 to output 
+	DDRB |= 1 << 5; //sets arduino pin 13 to output
 	sei();
 	while(TRUE){
 		; // stand alone semicolon is a NOP operation
@@ -28,8 +30,10 @@ void main(){
 ISR(USART_RX_vect){
 	uint8_t receivedByte;
 	receivedByte = (uint8_t) USART_Receive();
-	if(receivedByte == 1){
+	i++;
+	if(i == 32){
 		PORTB ^= 1 << 5; //toggles pin 13
+		i = 0;
 	}
 	sei();
 }

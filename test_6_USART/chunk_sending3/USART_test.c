@@ -13,11 +13,16 @@
 //Use Atmel studio if you have a windows PC
 //Linux may also have AVR crosspack tools as well
 
+uint8_t equals(uint8_t * A, uint8_t * B);
+
 #define TRUE 1
 #define FALSE 0
 
+uint8_t i = 0;
+uint8_t success[7] = {'s','u','c','c','e','s','s'};
+uint8_t buffer[32];
 void main(){
-	USART_Init(); //sets up USART registers
+	USART_Init(); //sets up USART register
 	DDRB |= 1 << 5; //sets arduino pin 13 to output 
 	sei();
 	while(TRUE){
@@ -25,13 +30,31 @@ void main(){
 	}
 }
 
+uint8_t equals(uint8_t * A, uint8_t * B){
+	for(uint8_t j = 0; j < 7; j++){
+		if(A[j] != B[j]){
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 ISR(USART_RX_vect){
 	uint8_t receivedByte;
 	receivedByte = (uint8_t) USART_Receive();
-	if(receivedByte == 1){
-		PORTB ^= 1 << 5; //toggles pin 13
+	buffer[i] = receivedByte;
+	i++;
+	if(i == 32){
+		if(equals(success, buffer)){
+			USART_Transmit(7);
+			for(uint8_t j = 0; j < 7; j++){
+				USART_Transmit(success[j]);
+			}
+		}
+		i = 0;
 	}
 	sei();
 }
-//receiving a byte from serial port, any programming language can send into the port
+//receiving 32  bytes from serial port, any programming language can send into the port
 //in this case will be using python
+
