@@ -244,7 +244,8 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 				elif type == ADDRESS:
 					print("ADDRESS:", data[3:])
 					try:
-						address_queue.put(data[3:].decode())
+						data = str(data)
+						address_queue.put(data[18:len(data) - 2])
 					except:
 						pass
 				elif type == FILELINE:
@@ -354,7 +355,7 @@ class PendingMessage:
 		self.target_addresses = target_addresses
 		message = source_address + "\t" + message
 		self.chunks = util.messageChunks(message, c.MESSAGE_LENGTH)
-		self.message = util.chunks_to_message(self.chunks) #adjust it for payload length maybe
+		self.message = util.chunks_to_message(self.chunks) #adjust it for payload length maybe  and adjust it to have flatter looking messages
 		self.chunks.insert(0,chr(len(self.chunks)))
 	
 	def get_chunks(self):
@@ -427,7 +428,8 @@ class ReceivingMessage:
 		return self.current_amount == self.amount
 	
 	def get_message(self):
-		return "\n".join(self.chunks)
+		message = "\n".join(self.chunks)
+		return message + "\n"
 
 class ReceivingFile:
 	def __init__(self,amount, filename):
@@ -478,11 +480,13 @@ class MasterTransceiverInterface(TransceiverInterface):
 		self.searching_running = False
 		self.message_controller_created = False
 		
-		
+		self.pending_loads = []
+		self.pending_file_loads = []
 		self.pending_message_objects = []   # this will replace some if the lists
 		self.pending_file_objects = []
 		self.receiving_message_objects = dict()
 		self.receiving_file_objects = dict()
+		self.new_status_messages = []
 		
 		self.text_display = TextDisplayWrapper()   #have it by default be print in a different way
 		
@@ -491,18 +495,20 @@ class MasterTransceiverInterface(TransceiverInterface):
 		self.file_sending_thread  = threading.Thread(target = self.__fileSendThread)
 		self.file_receiving_thread = threading.Thread(target = self.__fileReceiveThread)
 		self.node_search_thread = threading.Thread(target = self.__finding)
+		self.loading_file_thread = threading.Thread(target = self.__loading_file)
+		self.loading_thread = threading.Thread(target = self.__loading)
 		
 		self.sending_thread_on = False
 		self.receiving_thread_on = False
 		self.file_sending_thread_on = False
 		self.file_receiving_thread_on = False
 		
-		self.start_threads()
+		self.searching = False
+		
+		#self.start_threads() #maybe start when I open the port instead 
 	
 	def start_threads(self):
-		self.sending_thread.start()
-		self.receiving_thread.start()
-		self.file_sending_thread.start()
+		self.receiving_thread.start()         #probably need to change to a process
 		self.file_receiving_thread.start()
 		
 	def command_line_send(self, message):
@@ -544,15 +550,41 @@ class MasterTransceiverInterface(TransceiverInterface):
 			print(self.nearby_nodes)
 			
 	def load_file(self, filename, address = "\x00!!"):    #this stuff is annoying aaaaahhhhh
-		self.pending_file_objects.append(PendingFile(filename, address))
+		self.pending_file_loads.append([filename,address])
+		if not self.loading_file_thread.is_alive():
+			self.loading_file_thread = threading.Thread(target = self.__loading_file)
+			self.loading_file_thread.start()
+	
+	def __loading_file(self):
+		while len(self.pending_file_loads) > 0:
+			pending_file_args = self.pending_file_loads.pop(0)
+			filename = pending_file_args[0]
+			address = pending_file_args[1]
+			self.pending_file_objects.append(PendingFile(filename, address))
+			if not self.file_sending_thread.is_alive():
+				self.file_sending_thread = threading.Thread(target = self.__fileSendThread)
+				self.file_sending_thread.start()
+		
 		
 				
 		
 	def load(self, message,addresses = ["\x00!!"]): #can compartamentalize into a message class
-		self.pending_message_objects.append(PendingMessage(message, self.rx_address[0], addresses))
-		
-		
-		
+		self.pending_loads.append([message,addresses])
+		if not self.loading_thread.is_alive():
+			self.loading_thread = threading.Thread(target = self.__loading)
+			self.loading_thread.start()
+	
+	def __loading(self):
+		while len(self.pending_loads) > 0:
+			pending_args = self.pending_loads.pop(0)
+			message = pending_args[0]
+			addresses = pending_args[1]
+			self.pending_message_objects.append(PendingMessage(message, self.rx_address[0], addresses))
+			if not self.sending_thread.is_alive():
+				self.sending_thread = threading.Thread(target = self.__sendThread)
+				self.sending_thread.start()
+			
+			
 	def sendMessage(self, chunks):  #this will work by threads
 		STATE_ID = False
 		for i in range(len(chunks)): ####error here because adding extra bytes by mistake
@@ -580,18 +612,17 @@ class MasterTransceiverInterface(TransceiverInterface):
 		
 	
 	def __sendThread(self):
-		self.sending_thread_on = True
-		while self.sending_thread_on:
-			if len(self.pending_message_objects) > 0:
-				message_object = self.pending_message_objects.pop(0)
-				message = message_object.get_message()
-				addresses = message_object.get_target_addresses()
-				chunks = message_object.get_chunks()
-				for address in addresses:
-					self.set_TX_address(address)
-					if not self.sendMessage(chunks):
-						message += address + "\t" + "<"* 6 + "FAILED" + ">" * 6 + "\n"
-				self.text_display.write(message)
+		while len(self.pending_message_objects) > 0:
+			message_object = self.pending_message_objects.pop(0)
+			message = message_object.get_message()
+			addresses = message_object.get_target_addresses()
+			chunks = message_object.get_chunks()
+			for address in addresses:
+				self.set_TX_address(address)
+				if not self.sendMessage(chunks):
+					message += address + "\t" + "<"* 6 + "FAILED" + ">" * 6 + "\n"
+			self.text_display.write(message)
+			self.new_status_messages.append(message)
 				
 	
 	def __receiveThread(self):
@@ -613,7 +644,9 @@ class MasterTransceiverInterface(TransceiverInterface):
 				for address in self.receiving_message_objects:
 					receiving_message_object = self.receiving_message_objects[address]
 					if receiving_message_object.is_complete():
-						self.text_display.write(receiving_message_object.get_message())
+						message = receiving_message_object.get_message()
+						self.new_status_messages.append(message)
+						self.text_display.write(message)
 						addresses_to_remove.append(address)
 				
 				for address in addresses_to_remove:
@@ -624,18 +657,16 @@ class MasterTransceiverInterface(TransceiverInterface):
 
 	
 	def __fileSendThread(self):
-		self.file_sending_thread_on = True
-		while self.file_sending_thread_on:
-			if len(self.pending_file_objects) > 0:
-				file_object = self.pending_file_objects.pop(0)
-				address = file_object.get_target_address()
-				chunks = file_object.get_chunks()
-				filename = file_object.get_filename()
-				self.set_TX_address(address)
-				if not self.sendFile(chunks):
-					self.text_display.write(" " * 3 + "\t" + "<<<<<" + filename + " FAILED>>>>>>")
-				else:
-					self.text_display.write(" " * 3 + "\t" + filename + " SENT!")
+		while len(self.pending_file_objects) > 0:
+			file_object = self.pending_file_objects.pop(0)
+			address = file_object.get_target_address()
+			chunks = file_object.get_chunks()
+			filename = file_object.get_filename()
+			self.set_TX_address(address)
+			if not self.sendFile(chunks):
+				self.text_display.write(" " * 3 + "\t" + "<<<<<" + filename + " FAILED>>>>>>")
+			else:
+				self.text_display.write(" " * 3 + "\t" + filename + " SENT!")
 	
 	def __fileReceiveThread(self):
 		self.file_receiving_thread_on = True  #this can be grouped and chunked into message classes
@@ -721,13 +752,13 @@ class MasterTransceiverInterface(TransceiverInterface):
 		return success
 	
 	def search(self):
-		if self.searching_running:
-			self.node_search.join()
-		self.node_search_thread.start()
-		self.searching_running = True
+		if not self.node_search_thread.is_alive():
+			self.node_search_thread = threading.Thread(target = self.__finding)
+			self.node_search_thread.start()
 			
 	
 	def __finding(self):  #gonna modify the finding process
+		self.searching = True
 		self.nearby_nodes.clear()
 		self.send_queue.put(Command.set_TX_address(c.FINDING_ADDRESS))
 		start = time.monotonic()
@@ -765,6 +796,8 @@ class MasterTransceiverInterface(TransceiverInterface):
 		for address in addresses:
 			if address not in self.active_nodes:
 				self.nearby_nodes.append(address)
+		
+		self.searching = False
 	
 	def get_nearby_nodes(self):
 		return self.nearby_nodes
@@ -786,6 +819,14 @@ class MasterTransceiverInterface(TransceiverInterface):
 	def setMessageControllerCreated(self, value):
 		self.message_controller_created = value
 	
+	def is_searching(self):
+		return self.searching
+	
+	
+	def new_status(self):
+		if len(self.new_status_messages) == 0:
+			return None
+		return self.new_status_messages.pop(0)
 	
 	
 	def close(self):
