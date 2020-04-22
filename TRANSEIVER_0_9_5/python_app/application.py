@@ -1,7 +1,7 @@
 import tkinter as tk
-from main_controller import MainController
-from master_transceiver_interface import MasterTransceiverInterface
-from main_view import MainView
+from controllers.main_controller import MainController
+from models.transceiver_interfaces.master_transceiver_interface import MasterTransceiverInterface
+from views.main_view import MainView
 
 class Application:
 	def __init__(self):

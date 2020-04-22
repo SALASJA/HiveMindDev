@@ -1,8 +1,8 @@
 import tkinter as tk
-from message_view import MessageView
-from connection_view import ConnectionView
-from add_connection_view import AddConnectionView
-from settings_view import SettingsView
+from views.message_view import MessageView
+from views.connection_view import ConnectionView
+from views.add_connection_view import AddConnectionView
+from views.settings_view import SettingsView
 
 class MainView:
 	def __init__(self, parent):

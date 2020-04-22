@@ -58,9 +58,9 @@ class ConnectionView:
 		self.widgets["pictureframe"] = tk.Frame(pictureframe)
 		load = None 
 		try:
-			load = Image.open("python_app/image.gif")
+			load = Image.open("python_app/images/image.gif")
 		except:
-			load = Image.open("image.gif")
+			load = Image.open("images/image.gif")
 		render = ImageTk.PhotoImage(load)
 		img = tk.Label(pictureframe, image = render)
 		img.image = render
