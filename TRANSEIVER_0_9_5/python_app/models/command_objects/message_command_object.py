@@ -1,5 +1,5 @@
-import transceiver_commands as c
-from transmit_command_object import TransmitCommandObject
+import models.command_objects.transceiver_commands as c
+from models.command_objects.transmit_command_object import TransmitCommandObject
 class MessageCommandObject(TransmitCommandObject):
 	def set_message_id(self,ID):
 		self.bits[2] = ID

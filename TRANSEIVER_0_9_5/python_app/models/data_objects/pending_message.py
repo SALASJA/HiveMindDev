@@ -1,5 +1,5 @@
-import util
-import transceiver_commands as c
+from utility import util
+import models.command_objects.transceiver_commands as c
 #make the pending message object soon
 class PendingMessage:
 	def __init__(self, message, source_address, target_addresses = ["\x00!!"]):

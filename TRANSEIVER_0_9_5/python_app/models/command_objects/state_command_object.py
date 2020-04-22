@@ -1,4 +1,4 @@
-from command_object import CommandObject
+from models.command_objects.command_object import CommandObject
 class StateCommandObject(CommandObject):  #the way imma read the addresses in the arduino code different now
 	
 	def set_address_pipe(self, pipe):

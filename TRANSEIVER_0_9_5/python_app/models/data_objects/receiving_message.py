@@ -1,5 +1,5 @@
-import util
-import transceiver_commands as c
+from utility import util
+import models.command_objects.transceiver_commands as c
 class ReceivingMessage:
 	def __init__(self, amount):
 		self.chunks = []

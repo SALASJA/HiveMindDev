@@ -1,5 +1,5 @@
-import util
-import transceiver_commands as c
+from utility import util
+import models.command_objects.transceiver_commands as c
 class PendingFile:
 	def __init__(self, filename, target_address = "\x00!!"):
 		self.target_address = target_address

@@ -1,4 +1,4 @@
-from transmit_command_object import TransmitCommandObject
+from models.command_objects.transmit_command_object import TransmitCommandObject
 class FindCommandObject(TransmitCommandObject):
 	def set_source_address(self, address):
 		bit_index = 2

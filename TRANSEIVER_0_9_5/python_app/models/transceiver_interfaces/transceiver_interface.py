@@ -2,7 +2,7 @@ import time
 import serial
 import multiprocessing
 from ctypes import c_bool
-from command import Command
+from models.command_objects.command import Command
 class TransceiverInterface: #rather than as static it should be kept in a seperate thing
 	
 	def __init__(self, SERIAL_PORT_NAME = None, BAUD_RATE = 9600): # there might need to be a node ID nodeid = A, and tx = 00000 and rx = 11111

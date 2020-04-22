@@ -1,7 +1,7 @@
-from message_command_object import MessageCommandObject
-from state_command_object import StateCommandObject
-from find_command_object import FindCommandObject
-import transceiver_commands as c 
+from models.command_objects.message_command_object import MessageCommandObject
+from models.command_objects.state_command_object import StateCommandObject
+from models.command_objects.find_command_object import FindCommandObject
+import models.command_objects.transceiver_commands as c 
 class Command:
 	@staticmethod
 	def personal_message(ID, message, rx_address): #this might be easier to fix
