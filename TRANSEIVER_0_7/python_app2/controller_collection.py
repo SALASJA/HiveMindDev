@@ -62,7 +62,6 @@ class HistoryController:
 		
 	def set_events(self):
 		history_label = self.view.getWidget("history_label")
-		history_label["command"] = self.__updatePortList
 		
 		
 		
