@@ -3,8 +3,10 @@ import models.command_objects.transceiver_commands as c
 class PendingFile:
 	def __init__(self, filename, target_address = "\x00!!"):
 		self.target_address = target_address
-		self.filename = filename
 		file = open(filename, "rb")
+		filenamechunks = filename.split("/")
+		filename = filenamechunks[len(filenamechunks) - 1]
+		self.filename = filename
 		data = file.read()
 		file.close()
 		chunks = util.fileChunks(data,c.MESSAGE_LENGTH)

@@ -10,7 +10,7 @@ class MessageView:
 		window.resizable(0,0)
 		window.title(name)
 		window.withdraw()
-		#window.protocol('WM_DELETE_WINDOW', self.hide)
+		window.protocol('WM_DELETE_WINDOW', self.hide)
 		self.construct_look()
 	
 	def hide(self):

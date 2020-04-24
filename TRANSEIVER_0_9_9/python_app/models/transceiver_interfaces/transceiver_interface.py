@@ -199,7 +199,6 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 			self.communication_process_on.value = False
 			for i in range(10):
 				print("closeing")
-			self.communicationProcess.join()
 			self.communicationProcess.terminate()
 		
 		if self.receive_queue != None:

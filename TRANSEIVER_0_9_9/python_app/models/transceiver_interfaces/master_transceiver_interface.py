@@ -2,6 +2,7 @@ from utility import util
 import time
 import threading
 import models.command_objects.transceiver_commands as c
+import os
 from models.command_objects.command import Command
 from models.transceiver_interfaces.transceiver_interface import TransceiverInterface
 from models.data_objects.pending_message import PendingMessage
@@ -204,10 +205,13 @@ class MasterTransceiverInterface(TransceiverInterface):
 			chunks = file_object.get_chunks()
 			filename = file_object.get_filename()
 			self.set_TX_address(address)
+			status = ""
 			if not self.sendFile(chunks):
-				self.text_display.write(" " * 3 + "\t" + "<<<<<" + filename + " FAILED>>>>>>")
+				status = " " * 3 + "\t" + "<<<<<" + filename + " FAILED>>>>>>"
 			else:
-				self.text_display.write(" " * 3 + "\t" + filename + " SENT!")
+				status = " " * 3 + "\t" + filename + " SENT!"
+			self.text_display.write(status)
+			self.new_status_messages.append(status)
 	
 	def __fileReceiveThread(self):
 		self.file_receiving_thread_on = True  #this can be grouped and chunked into message classes
@@ -223,7 +227,8 @@ class MasterTransceiverInterface(TransceiverInterface):
 					name_bytes = data[5:]
 					name = ""
 					i = 0
-					while name_bytes[i] != 0:
+					print("hmmmmmm: ", name_bytes)
+					while i < len(name_bytes) and name_bytes[i] != 0:
 						name += chr(name_bytes[i])
 						i = i + 1
 				
@@ -237,11 +242,13 @@ class MasterTransceiverInterface(TransceiverInterface):
 					receiving_file_object = self.receiving_file_objects[address]
 					if receiving_file_object.is_complete():
 						filename = receiving_file_object.get_filename()
-						file = open("received_" + filename, "wb")
+						directory = os.getcwd()
+						file = open(directory + "/received_" + filename, "wb")
 						filebytes = receiving_file_object.get_bytes()
 						file.write(filebytes)
 						file.close()
-						print("file_written***********************")
+						self.new_status_messages.append("   \t" + filename + " written\n")
+						print("   \t" + filename + " written\n")
 						addresses_to_remove.append(address)
 				
 				
@@ -371,17 +378,9 @@ class MasterTransceiverInterface(TransceiverInterface):
 	
 	
 	def close(self):
-		super().close()
-		print("hello")
-		self.sending_thread_on = False
-		for i in range(10):
-			print("waiting")
-		self.sending_thread.join()
-		
+		self.file_receiving_thread_on = False
 		self.receiving_thread_on = False
-		for i in range(10):
-			print("waiting")
-		self.receiving_thread.join()
+		super().close()
 	
 	def __del__(self):
 		self.close()

@@ -1,4 +1,5 @@
 from controllers.message_controller import MessageController
+from tkinter import filedialog
 class ConnectionController:
 	def __init__(self, view, model):
 		self.view = view
@@ -47,7 +48,8 @@ class ConnectionController:
 		#DataController(MessageView(message_window), self.model)
 	
 	def open_send_file_window(self):
-		print("hmmmm")
+		filename = filedialog.askopenfilename(initialdir = "/",title = "Select file" )
+		self.model.load_file(filename)
 		#send_file_window = tk.Toplevel()
 		#SendFileController(MessageView(send_file_window), self.model)
 	

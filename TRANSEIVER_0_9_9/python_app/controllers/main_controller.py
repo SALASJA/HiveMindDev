@@ -18,6 +18,7 @@ class MainController:
 		dropmenu.entryconfig(0, command = self.open_settings)
 		dropmenu.entryconfig(1, command = self.open_add_connection)
 		window = self.view.getWidget("window")
+		window.protocol('WM_DELETE_WINDOW', self.close)
 		
 	
 	def open_settings(self):
@@ -29,4 +30,23 @@ class MainController:
 		add_connection_view.show() #refresh
 		add_connection_view.setMainView(self.view)
 		AddConnectionController(add_connection_view, self.model)
+	
+	def close(self):
+		self.model.close()
+		add_connection_view = self.view.getAddConnectionView()
+		window = add_connection_view.getWidget("toplevel_add_connection_window")
+		window.destroy()
+		
+		settings_view = self.view.getSettingsView()
+		window = settings_view.getWidget("toplevel_settings_window")
+		window.destroy()
+		
+		message_view = self.view.getMessageView()
+		window = message_view.getWidget("window")
+		window.destroy()
+		
+		window = self.view.getWidget("window")
+		window.destroy()
+
+		
 	
