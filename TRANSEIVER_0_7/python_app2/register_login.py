@@ -4,6 +4,10 @@ from tkinter import *
 from PIL import Image, ImageTk
 from cryptography.fernet import Fernet
 import os
+import base64
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 # handles register window
 def register():
@@ -13,6 +17,7 @@ def register():
     global pw
     global user_entry
     global pw_entry
+
 
     register_window = Toplevel(main_window)
     register_window.title("Register")
@@ -56,28 +61,29 @@ def user_register():
     pw_info = pw.get()
 
 # Open file in write mode
-    file = open(user_info, "w")
-
-
+    if not os.path.exists(user_info + '.txt'):
+        file = open(user_info + '.txt', "wb")
 
 # write username and password information into file
-    key = Fernet.generate_key() 
-    cipher_suite = Fernet(key)
-    encoded_text = cipher_suite.encrypt(bytes(pw_info, encoding= 'utf-8'))
-    decoded_text = cipher_suite.decrypt(encoded_text)
+        password_provided = pw_info
 
-    file.write(user_info + "\n")
+    
+        key = b'TGgdgV197X9imuoNn3xy697Ap1-zzCsRuTI6E8WV8IU=' 
+        f = Fernet(key)
+    
+        encoded_text = f.encrypt(bytes(pw_info, encoding= 'utf-8'))
 
-    #file.write(encoded_text.decode("utf-8"))
-    file.write(pw_info)
-    file.close()
+        file.write(encoded_text)
+        file.close()
 
-    user_entry.delete(0, END)
-    pw_entry.delete(0, END)
+        user_entry.delete(0, END)
+        pw_entry.delete(0, END)
 
-    Label(register_window, text = "You have successfully registered!", fg = "green", font = ("Calibri", 11)).pack()
+        Label(register_window, text = "You have successfully registered!", fg = "green", font = ("Calibri", 11)).pack()
 
-    register_window.after(2000, lambda: register_window.destroy())
+        register_window.after(2000, lambda: register_window.destroy())
+    else:
+        user_already_exists()
 
 # define login function
 def login():
@@ -109,9 +115,13 @@ def login():
     Button(login_window, text = "Login", width = 10, height = 1, command = login_verify).pack()
 
 def login_verify():
+
 # get username and password
-    username = user_verify.get()
     password = pw_verify.get()
+    
+    key = b'TGgdgV197X9imuoNn3xy697Ap1-zzCsRuTI6E8WV8IU='
+    f = Fernet(key)
+    username = user_verify.get()
 
 # this will delete the entry after login button is pressed
     user_login_entry.delete(0, END)
@@ -121,17 +131,29 @@ def login_verify():
     list_of_files = os.listdir()
 
 #defining verification's conditions
-    if username in list_of_files:
-        file1 = open(username, "r") # open the file in read mode
-        verify = file1.read().splitlines()
-        if password in verify:
-            login_success()
+    if username + '.txt' in list_of_files:
+        file1 = open(username + '.txt', "rb") # open the file in read mode
+        verify = file1.read()
 
+        encrypted = f.decrypt(verify)
+        original = encrypted.decode()
+        print(original)
+        
+        if password == original:
+            login_success()
         else:
             pw_not_recognized()
 
     else:
         user_not_found()
+
+def user_already_exists():
+    global user_already_exists_window
+    user_already_exists_window = Toplevel(register_window)
+    user_already_exists_window.title("Error")
+    user_already_exists_window.geometry("150x100")
+    Label(user_already_exists_window, text="User already exists!").pack()
+    Button(user_already_exists_window, text="OK", command=delete_user_already_exists).pack()
 
 # Designing popup for login success
 
@@ -148,7 +170,7 @@ def login_success():
 def pw_not_recognized():
     global pw_not_recognized_window
     pw_not_recognized_window = Toplevel(login_window)
-    pw_not_recognized_window.title("Success")
+    pw_not_recognized_window.title("Error")
     pw_not_recognized_window.geometry("150x100")
     Label(pw_not_recognized_window, text="Invalid Password ").pack()
     Button(pw_not_recognized_window, text="OK", command=delete_pw_not_recognized).pack()
@@ -158,12 +180,14 @@ def pw_not_recognized():
 def user_not_found():
     global user_not_found_window
     user_not_found_window = Toplevel(login_window)
-    user_not_found_window.title("Success")
+    user_not_found_window.title("Error")
     user_not_found_window.geometry("150x100")
     Label(user_not_found_window, text="User Not Found").pack()
     Button(user_not_found_window, text="OK", command=delete_user_not_found_window).pack()
 
 # Deleting popups
+def delete_user_already_exists():
+    user_already_exists_window.destroy()
 
 def delete_login_success():
     login_success_window.destroy()
