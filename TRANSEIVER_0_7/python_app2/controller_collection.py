@@ -1,10 +1,11 @@
 import tkinter as tk
-from view_collection import SettingsView, AddConnectionView, MessageView
+from view_collection import SettingsView, AddConnectionView, MessageView, HistoryView
 from functools import partial
 import threading
 import glob
 
 class Controller:
+	
 	def __init__(self, view, model):
 		self.view = view
 		self.model = model
@@ -21,6 +22,7 @@ class Controller:
 		dropmenu = self.view.getWidget("Application_dropmenu")
 		dropmenu.entryconfig(0, command = self.open_settings)
 		dropmenu.entryconfig(1, command = self.open_add_connection)
+		dropmenu.entryconfig(2, command = self.open_history)
 		window = self.view.getWidget("window")
 		
 	
@@ -33,6 +35,13 @@ class Controller:
 		add_connection_view.show() #refresh
 		add_connection_view.setMainView(self.view)
 		AddConnectionController(add_connection_view, self.model)
+		
+	def open_history(self):
+		add_history_view = self.view.getHistoryView()
+		add_history_view.show()
+		add_history_view.setMainView(self.view)
+		HistoryController(add_history_view, self.model)
+		
 	
 	def add_connection(self):
 		add_connection_window = tk.Toplevel()
@@ -45,7 +54,18 @@ class Controller:
 	
 		
 
-
+class HistoryController:
+	def __init__(self,view, model):
+		self.view = view
+		self.model = model
+		self.set_events()
+		
+	def set_events(self):
+		history_label = self.view.getWidget("history_label")
+		
+		
+		
+		
 class SettingsController:
 	def __init__(self,view, model):
 		self.view = view

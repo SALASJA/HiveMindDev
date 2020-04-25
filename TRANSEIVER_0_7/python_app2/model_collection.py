@@ -2,7 +2,14 @@ import serial
 import multiprocessing
 import time
 import util 
-
+import glob
+import logging
+import logging.handlers
+from datetime import date
+LOG = open('log.txt','a')
+today = date.today()
+print(today,file = LOG)
+LOG.flush()
 class Network:
 	def __init__(self):
 		self.transceiver = TransceiverInterface()
@@ -80,6 +87,8 @@ class Network:
 	"""
 	
 	def send(self):
+		print(message,file = LOG)
+		LOG.flush()
 		if self.message_last_sent == "":
 			self.message_last_sent = str(self.message_number)
 			
@@ -129,6 +138,8 @@ class Network:
 	def receive(self):
 		message = self.transceiver.receivePersonalMessage()
 			
+		print(message,file = LOG)
+		LOG.flush()
 		
 		if message != None  and "\\x" not in message and message != "" and message != "\n":
 				
@@ -172,6 +183,7 @@ class Network:
 	def findConnections(self):
 		connections = self.transceiver.finding()
 		return connections
+		
 
 class TransceiverInterface: #rather than as static it should be kept in a seperate thing
 	MESSAGING = 0
@@ -188,7 +200,6 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 	FILE_LINE_SEND = "6"
 	FLUSH = '\r'   #should use something different
 	SUCCESS_RETURN = "0"
-	
 	def __init__(self, SERIAL_PORT_NAME = None, BAUD_RATE = 9600): # there might need to be a node ID nodeid = A, and tx = 00000 and rx = 11111
 		self.communicationProcess = None
 		self.send_queue = None
@@ -284,6 +295,7 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 				if "ADDRESS:" in reading:
 					reading = obj.formatReceivedMessage(reading)    #should use obj instead since self makes it misleading
 					address_queue.put(reading)
+					print('test')
 				elif "STATE:" in reading:
 					reading = obj.formatReceivedMessage(reading)
 					state_queue.put(reading)
@@ -315,6 +327,7 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 			l = message.index(':') + 1
 			r = message.rindex('\\')
 			message = message[l : r]
+			print(message,file=LOG)
 		except Exception as e:
 			print("cant format: " , e)
 			message = copy_of_message
@@ -387,6 +400,7 @@ class TransceiverInterface: #rather than as static it should be kept in a sepera
 		interval = start
 		addresses = []
 		self.send_queue.put(bytes(chr(TransceiverInterface.MESSAGING) + TransceiverInterface.ADDRESS_RETURN + self.rx_address[0] + TransceiverInterface.FLUSH, encoding = "utf-8"))
+		print(bytes(chr(TransceiverInterface.MESSAGING) + TransceiverInterface.ADDRESS_RETURN + self.rx_address[0] + TransceiverInterface.FLUSH, encoding = "utf-8"))
 		while time.monotonic() < start + 15:
 			if time.monotonic() > interval + 0.10:
 				print("searching")
